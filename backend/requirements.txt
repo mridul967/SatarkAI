@@ -30,3 +30,8 @@ evidently
 # Testing
 pytest==7.4.3
 pytest-asyncio==0.21.1
+
+# Databases & Streaming (Enterprise Infrastructure)
+redis>=5.0.1
+neo4j>=5.14.1
+aiokafka>=0.10.0
