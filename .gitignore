@@ -1,0 +1,28 @@
+# Secrets
+.env
+
+# Large model files (share via HuggingFace Hub or GitHub Releases)
+*.pt
+*.pkl
+*.onnx
+
+# Data (share via Kaggle or DVC)
+data/*.csv
+data/*.parquet
+data/*.json
+
+# Python
+__pycache__/
+*.pyc
+.venv/
+venv/
+env/
+dist/
+
+# Node
+node_modules/
+frontend/dist/
+
+# MLflow
+mlruns/
+.DS_Store
