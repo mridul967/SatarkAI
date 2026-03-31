@@ -26,3 +26,5 @@ frontend/dist/
 # MLflow
 mlruns/
 .DS_Store
+data/*.db
+data/neo4j/
