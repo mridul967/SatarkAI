@@ -21,3 +21,5 @@ class FraudPrediction(BaseModel):
     graph_signals: List[str]
     model_used: str
     processing_time_ms: float
+
+    model_config = {"protected_namespaces": ()}
