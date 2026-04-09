@@ -29,3 +29,7 @@ mlruns/
 data/*.db
 data/neo4j/
 documentation/PROJECT_PHASES.md
+
+# Blockchain (Hardhat)
+artifacts/
+cache/

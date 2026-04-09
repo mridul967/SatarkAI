@@ -1,8 +1,14 @@
-/** @type import('hardhat/config').HardhatUserConfig */
-require("@nomicfoundation/hardhat-toolbox");
-require("dotenv").config();
+import "@nomicfoundation/hardhat-toolbox";
+import dotenv from "dotenv";
 
-module.exports = {
+dotenv.config();
+
+// Only use the private key if it's a real 64-char hex string (not the placeholder)
+const privateKey = process.env.PRIVATE_KEY;
+const hasValidKey = privateKey && privateKey.length === 66 && privateKey.startsWith("0x") && privateKey !== "0x...";
+
+/** @type import('hardhat/config').HardhatUserConfig */
+export default {
   solidity: "0.8.19",
   networks: {
     hardhat: {
@@ -10,7 +16,7 @@ module.exports = {
     },
     amoy: {
       url: process.env.POLYGON_AMOY_RPC || "",
-      accounts: process.env.PRIVATE_KEY ? [process.env.PRIVATE_KEY] : []
+      accounts: hasValidKey ? [privateKey] : []
     }
   }
 };

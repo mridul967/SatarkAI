@@ -20,9 +20,25 @@ class BlockchainService:
         self.registry_abi = self._load_abi("contracts/FraudSignalRegistry.sol")
         self.ledger_abi = self._load_abi("contracts/FraudAuditLedger.sol")
 
-        if self.private_key:
-            self.account = Account.from_key(self.private_key)
-            self.w3.eth.default_account = self.account.address
+        # Validate if the private key is a real 64-char hex string (66 with 0x)
+        is_valid_key = (
+            self.private_key and 
+            len(self.private_key) == 66 and 
+            self.private_key.startswith("0x") and 
+            all(c in "0123456789abcdefABCDEF" for c in self.private_key[2:])
+        )
+
+        if is_valid_key:
+            try:
+                self.account = Account.from_key(self.private_key)
+                self.w3.eth.default_account = self.account.address
+            except Exception as e:
+                print(f"Blockchain Service: Failed to initialize account: {e}")
+                self.account = None
+        else:
+            self.account = None
+            if self.private_key and self.private_key != "0x...":
+                print(f"Blockchain Service: Invalid private key detected (length {len(self.private_key)}). Skipping account initialization.")
 
     def _load_abi(self, contract_path):
         # In a real environment, we'd load the compiled .json artifacts from artifacts/contracts/...
