@@ -1,13 +1,20 @@
 import { useState, useRef, useEffect } from 'react';
-import { Activity, GitGraph, BrainCircuit, Database, Menu, ChevronDown, Settings, FileText, BookOpen, LogOut } from 'lucide-react';
+import { 
+  Activity, GitGraph, BrainCircuit, Database, ChevronRight, 
+  Settings, BookOpen, LogOut, ShieldCheck, Terminal, 
+  Search, Bell, Command, LayoutDashboard, Globe
+} from 'lucide-react';
 import { useWebSocket } from './hooks/useWebSocket';
 import { useAuth } from './contexts/AuthContext';
+
+// Redesigned Components
 import ScoreGauge from './components/ScoreGauge';
 import FraudGraph from './components/FraudGraph';
 import ModelCompare from './components/ModelCompare';
 import TransactionHistory from './components/TransactionHistory';
 import AccountSettings from './components/AccountSettings';
 import BankPortal from './components/BankPortal';
+import AnalystConsole from './components/AnalystConsole';
 import Login from './components/Login';
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000';
@@ -15,278 +22,201 @@ const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000';
 function App() {
   const { user, logout } = useAuth();
   const [activeTab, setActiveTab] = useState('dashboard');
-  const [adminOpen, setAdminOpen] = useState(false);
-  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const { isConnected, lastTransaction, data } = useWebSocket('ws://localhost:8000/ws/transactions');
-  const dropdownRef = useRef(null);
 
-  // Close dropdown on outside click
-  useEffect(() => {
-    const handler = (e) => {
-      if (dropdownRef.current && !dropdownRef.current.contains(e.target)) setAdminOpen(false);
-    };
-    document.addEventListener('mousedown', handler);
-    return () => document.removeEventListener('mousedown', handler);
-  }, []);
+  if (!user) return <Login />;
 
-  if (!user) {
-    return <Login />;
-  }
-
-  const tabs = [
-    { id: 'dashboard', label: 'Live Predictions', icon: Activity },
-    { id: 'graph', label: 'Entity Graph', icon: GitGraph },
-    { id: 'models', label: 'LLM Models', icon: BrainCircuit },
-    { id: 'history', label: 'System Logs', icon: Database },
-    { id: 'bank-network', label: 'Bank Network', icon: BookOpen },
-    { id: 'settings', label: 'Settings', icon: Settings },
+  const navItems = [
+    { id: 'dashboard', label: 'Workstation', icon: LayoutDashboard },
+    { id: 'graph', label: 'Entity Mapper', icon: GitGraph },
+    { id: 'models', label: 'Consensus Base', icon: BrainCircuit },
+    { id: 'bank-network', label: 'Mesh Network', icon: Globe },
+    { id: 'history', label: 'Audit Ledger', icon: Database },
+    { id: 'settings', label: 'Node Settings', icon: Settings },
   ];
 
-  const getRiskBadge = (level) => {
-    const map = {
-      CRITICAL: 'bg-red-500/20 text-red-400 border-red-500/30',
-      HIGH: 'bg-orange-500/20 text-orange-400 border-orange-500/30',
-      MEDIUM: 'bg-yellow-500/20 text-yellow-400 border-yellow-500/30',
-      SAFE: 'bg-emerald-500/20 text-emerald-400 border-emerald-500/30',
-    };
-    return map[level] || 'bg-gray-500/20 text-gray-400 border-gray-500/30';
+  const getRiskColor = (level) => {
+    if (level === 'CRITICAL' || level === 'HIGH') return 'text-red-500';
+    if (level === 'MEDIUM') return 'text-amber-500';
+    return 'text-emerald-500';
   };
 
   return (
-    <div className="flex flex-col h-screen bg-[#0a0e14] text-gray-200 overflow-hidden font-sans">
+    <div className="flex h-screen bg-bg-deep text-slate-200 overflow-hidden selection:bg-emerald-500/30">
+      
+      {/* ─── SIDEBAR ─────────────────────────────────────── */}
+      <aside className="w-[260px] glass-panel flex flex-col z-50">
+        <div className="p-6 mb-4">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 bg-emerald-500 rounded-xl flex items-center justify-center shadow-[0_0_20px_rgba(16,185,129,0.3)]">
+              <ShieldCheck className="text-white w-6 h-6" />
+            </div>
+            <div>
+              <h1 className="text-lg font-black tracking-tighter text-white">SATARK<span className="text-emerald-500 italic">AI</span></h1>
+              <div className="text-[9px] font-black uppercase tracking-[0.3em] text-slate-500 leading-none">Pro Engine v2.0</div>
+            </div>
+          </div>
+        </div>
 
-      {/* ─── TOP NAVBAR ──────────────────────────────── */}
-      <nav className="h-14 bg-[#111620] border-b border-[#1e2738] flex items-center px-4 z-50 shrink-0">
-        {/* Left: hamburger + brand */}
-        <button onClick={() => setMobileMenuOpen(!mobileMenuOpen)} className="p-2 text-gray-400 hover:text-white mr-3">
-          <Menu className="w-5 h-5" />
-        </button>
-
-        {/* Tabs */}
-        <div className="flex items-center space-x-1 overflow-x-auto no-scrollbar">
-          {tabs.map(tab => (
+        <nav className="flex-1 px-4 space-y-1">
+          {navItems.map(item => (
             <button
-              key={tab.id}
-              onClick={() => setActiveTab(tab.id)}
-              className={`flex items-center space-x-2 px-4 py-3.5 text-xs font-bold uppercase tracking-widest border-b-2 transition-all shrink-0 ${
-                activeTab === tab.id
-                  ? 'border-emerald-500 text-emerald-400 bg-emerald-500/5'
-                  : 'border-transparent text-gray-500 hover:text-gray-300 hover:bg-white/5'
+              key={item.id}
+              onClick={() => setActiveTab(item.id)}
+              className={`w-full flex items-center justify-between px-4 py-3 rounded-xl transition-all group ${
+                activeTab === item.id 
+                  ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20' 
+                  : 'text-slate-500 hover:text-slate-300 hover:bg-white/5 border border-transparent'
               }`}
             >
-              <tab.icon className="w-3.5 h-3.5" />
-              <span>{tab.label}</span>
+              <div className="flex items-center gap-3">
+                <item.icon className={`w-4 h-4 ${activeTab === item.id ? 'text-emerald-400' : 'text-slate-600 group-hover:text-slate-400'}`} />
+                <span className="text-xs font-bold uppercase tracking-widest">{item.label}</span>
+              </div>
+              {activeTab === item.id && <ChevronRight className="w-3 h-3 transition-transform" />}
             </button>
           ))}
-        </div>
+        </nav>
 
-        {/* Right side */}
-        <div className="ml-auto flex items-center space-x-4">
-          <div className="hidden sm:flex items-center space-x-2 text-[10px] uppercase font-bold text-gray-600 tracking-tighter">
-            <span>Model:</span>
-            <span className="text-emerald-500">GAT + 4 LLM</span>
-          </div>
-
-          {/* Admin dropdown */}
-          <div className="relative" ref={dropdownRef}>
-            <button
-              onClick={() => setAdminOpen(!adminOpen)}
-              className="flex items-center space-x-2 px-3 py-1.5 bg-[#1e2738] rounded-lg text-xs font-bold text-gray-300 hover:bg-[#2a3548] transition-colors uppercase tracking-widest border border-white/5"
-            >
-              <span>{user.username}</span>
-              <ChevronDown className={`w-3.5 h-3.5 transition-transform ${adminOpen ? 'rotate-180' : ''}`} />
+        <div className="p-6 border-t border-white/5 bg-black/20">
+          <div className="flex items-center gap-3 mb-6">
+            <div className="w-8 h-8 rounded-full bg-slate-800 border border-white/10 flex items-center justify-center text-[10px] font-bold">
+              {user.username?.[0]?.toUpperCase() || 'U'}
+            </div>
+            <div className="flex-1 min-w-0">
+              <div className="text-xs font-bold text-slate-200 truncate">{user.username}</div>
+              <div className="text-[9px] font-bold text-slate-500 uppercase tracking-tighter">Senior Analyst</div>
+            </div>
+            <button onClick={logout} className="p-2 text-slate-600 hover:text-red-400 transition-colors">
+              <LogOut className="w-4 h-4" />
             </button>
-            {adminOpen && (
-              <div className="absolute right-0 mt-2 w-52 bg-[#151b28] border border-[#1e2738] rounded-xl shadow-2xl py-1 animate-slide-up ring-1 ring-white/5">
-                <button 
-                  onClick={() => { setActiveTab('settings'); setAdminOpen(false); }}
-                  className="w-full flex items-center space-x-3 px-4 py-2.5 text-sm text-gray-300 hover:bg-[#1e2738] transition-colors"
-                >
-                  <Settings className="w-4 h-4 text-gray-500" /><span>Account Settings</span>
-                </button>
-                <button 
-                  onClick={() => { setActiveTab('history'); setAdminOpen(false); }}
-                  className="w-full flex items-center space-x-3 px-4 py-2.5 text-sm text-gray-300 hover:bg-[#1e2738] transition-colors"
-                >
-                  <FileText className="w-4 h-4 text-gray-500" /><span>System Logs</span>
-                </button>
-                <button className="w-full flex items-center space-x-3 px-4 py-2.5 text-sm text-gray-300 hover:bg-[#1e2738] transition-colors">
-                  <BookOpen className="w-4 h-4 text-gray-500" /><span>Documentation</span>
-                </button>
-                <div className="border-t border-[#1e2738] my-1" />
-                <button 
-                  onClick={logout}
-                  className="w-full flex items-center space-x-3 px-4 py-2.5 text-sm text-red-400 hover:bg-red-500/10 transition-colors"
-                >
-                  <LogOut className="w-4 h-4" /><span>Sign Out</span>
-                </button>
-              </div>
-            )}
           </div>
-
-          {/* Connection indicator */}
-          <div className={`w-2.5 h-2.5 rounded-full ${isConnected ? 'bg-emerald-500 shadow-lg shadow-emerald-500/40' : 'bg-red-500 shadow-lg shadow-red-500/40'} animate-pulse`} title={isConnected ? 'Connected' : 'Disconnected'} />
+          <div className="flex items-center justify-between text-[9px] font-black uppercase tracking-widest text-slate-600">
+            <span>Status</span>
+            <span className="flex items-center gap-1.5 text-emerald-500">
+              <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span>
+              Synchronized
+            </span>
+          </div>
         </div>
-      </nav>
+      </aside>
 
-      {/* ─── MAIN CONTENT ────────────────────────────── */}
-      <main className="flex-1 overflow-y-auto p-6 bg-[#0a0e14]">
+      {/* ─── MAIN CONTENT AREA ──────────────────────────── */}
+      <main className="flex-1 flex flex-col relative overflow-hidden">
+        
+        {/* Top Header / Breadcrumbs */}
+        <header className="h-16 border-b border-white/5 flex items-center px-8 justify-between bg-bg-deep/50 backdrop-blur-md z-40">
+          <div className="flex items-center gap-4 text-xs font-bold uppercase tracking-widest text-slate-500">
+            <span>Enterprise</span>
+            <ChevronRight className="w-3 h-3" />
+            <span className="text-slate-200">{navItems.find(n => n.id === activeTab)?.label}</span>
+          </div>
 
-        {/* ════ DASHBOARD (LIVE PREDICTIONS) ════ */}
-        {activeTab === 'dashboard' && (
-          <div className="max-w-[1400px] mx-auto space-y-5 animate-slide-up">
-            <h1 className="text-3xl font-bold text-white tracking-tight">Transaction Monitoring</h1>
-
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-              {/* Left Column */}
-              <div className="space-y-6">
-                {/* Current Transaction Gauge */}
-                <div className="bg-[#111620] border border-[#1e2738] rounded-2xl p-6 shadow-sm">
-                  <h3 className="text-xs font-bold text-gray-500 uppercase tracking-widest mb-6 border-l-2 border-emerald-500 pl-3">Current Transaction</h3>
-                  {lastTransaction ? (
-                    <ScoreGauge
-                      score={lastTransaction.prediction?.fraud_score || 0}
-                      riskLevel={lastTransaction.prediction?.risk_level || 'UNKNOWN'}
-                    />
-                  ) : (
-                    <div className="flex items-center justify-center h-32 text-gray-600 text-sm italic">Awaiting secure stream...</div>
-                  )}
-                </div>
-
-                {/* Recent Transaction Details */}
-                <div className="bg-[#111620] border border-[#1e2738] rounded-2xl p-6 shadow-sm">
-                  <h3 className="text-xs font-bold text-gray-500 uppercase tracking-widest mb-4 border-l-2 border-emerald-500 pl-3">Vector Analysis</h3>
-                  {lastTransaction ? (
-                    <div className="space-y-3.5 text-xs">
-                      <div className="flex justify-between py-1.5 border-b border-[#1e2738]/50">
-                        <span className="text-gray-500 font-medium">Txn Identifier</span>
-                        <span className="text-gray-200 font-mono">{lastTransaction.transaction.transaction_id}</span>
-                      </div>
-                      <div className="flex justify-between py-1.5 border-b border-[#1e2738]/50">
-                        <span className="text-gray-500 font-medium">Entity User</span>
-                        <span className="text-emerald-500 font-bold">{lastTransaction.transaction.user_id}</span>
-                      </div>
-                      <div className="flex justify-between py-1.5 border-b border-[#1e2738]/50">
-                        <span className="text-gray-500 font-medium">Volume</span>
-                        <span className="text-white font-extrabold">₹{lastTransaction.transaction.amount?.toLocaleString()}</span>
-                      </div>
-                      <div className="flex justify-between py-1.5">
-                        <span className="text-gray-500 font-medium">Node Location</span>
-                        <span className="text-gray-400 font-semibold">{lastTransaction.transaction.location}</span>
-                      </div>
-                    </div>
-                  ) : (
-                    <div className="text-gray-600 text-sm italic">No active vectors.</div>
-                  )}
-
-                  {/* LLM Reasoning */}
-                  {lastTransaction && (
-                    <div className="mt-6 p-4 rounded-xl bg-emerald-500/5 border border-emerald-500/10">
-                      <div className="text-[10px] font-black text-emerald-500 uppercase tracking-tighter mb-2">Engine Reasoning</div>
-                      <p className="text-xs text-gray-400 leading-relaxed font-medium italic">"{lastTransaction.prediction?.explanation || lastTransaction.prediction?.reason || "System processing legitimate pattern."}"</p>
-                    </div>
-                  )}
-                </div>
+          <div className="flex items-center gap-6">
+            <div className="hidden lg:flex items-center bg-black/30 border border-white/5 rounded-full px-4 py-2 gap-3 text-slate-500">
+              <Search className="w-3.5 h-3.5" />
+              <input type="text" placeholder="Search Neural ID..." className="bg-transparent border-none outline-none text-[10px] w-48 font-mono" />
+              <div className="flex items-center gap-1 opacity-40">
+                <Command className="w-3 h-3" />
+                <span className="text-[10px]">K</span>
               </div>
+            </div>
+            <button className="relative text-slate-500 hover:text-white transition-colors">
+              <Bell className="w-4 h-4" />
+              <span className="absolute -top-1 -right-1 w-2 h-2 bg-red-500 rounded-full border-2 border-bg-deep"></span>
+            </button>
+          </div>
+        </header>
 
-              {/* Right Column - Graph */}
-              <div className="lg:col-span-2">
-                <div className="bg-[#111620] border border-[#1e2738] rounded-2xl overflow-hidden h-full shadow-lg">
-                  <div className="p-4 border-b border-[#1e2738] bg-[#0d1219]">
-                    <h3 className="text-xs font-bold text-gray-500 uppercase tracking-widest pl-3 border-l-2 border-emerald-500">Relational Topology Node Map</h3>
+        {/* View Layouts */}
+        <div className="flex-1 overflow-y-auto p-8 custom-scrollbar">
+          
+          {/* Workstation View (Main Investigation) */}
+          {activeTab === 'dashboard' && (
+            <div className="max-w-[1600px] mx-auto space-y-8 animate-slide-up-subtle">
+              <div className="grid grid-cols-1 xl:grid-cols-12 gap-8 h-[550px]">
+                
+                {/* Left: Global Graph (Corpus) */}
+                <div className="xl:col-span-8 flex flex-col">
+                  <div className="flex items-center justify-between mb-4">
+                    <h2 className="text-[10px] font-black uppercase tracking-[0.3em] text-slate-500 flex items-center gap-2">
+                       <Terminal className="w-3 h-3" /> Global Entity Mapper
+                    </h2>
                   </div>
-                  <FraudGraph
-                    userId={lastTransaction ? lastTransaction.transaction.user_id : 'usr_1001'}
-                    API_URL={API_URL}
-                  />
+                  <div className="flex-1 min-h-0 rounded-2xl overflow-hidden glass-card">
+                    <FraudGraph userId={lastTransaction?.transaction.user_id || 'usr_1001'} API_URL={API_URL} />
+                  </div>
+                </div>
+
+                {/* Right: Focused HUD */}
+                <div className="xl:col-span-4 space-y-6">
+                  <div className="glass-card bg-emerald-500/[0.02] p-8 flex flex-col items-center border-emerald-500/10">
+                    <h3 className="text-[10px] font-black uppercase tracking-[0.3em] text-emerald-500/60 mb-6">Threat Vector Gauge</h3>
+                    <ScoreGauge 
+                      score={lastTransaction?.prediction?.fraud_score || 0}
+                      riskLevel={lastTransaction?.prediction?.risk_level || 'SAFE'}
+                    />
+                  </div>
+
+                  <div className="glass-card p-6 min-h-[160px] flex flex-col justify-center relative overflow-hidden">
+                    <div className="absolute top-0 right-0 p-4 opacity-5">
+                      <BrainCircuit className="w-16 h-16" />
+                    </div>
+                    <div className="text-[10px] font-black uppercase tracking-widest text-slate-500 mb-2">Primary Entity Identifier</div>
+                    <div className="text-2xl font-black text-white tracking-tighter mb-1 select-all">{lastTransaction?.transaction.user_id || 'ID_SYNCHRONIZING'}</div>
+                    <div className="flex items-center gap-3 mt-4">
+                      <div className="px-2 py-1 rounded bg-slate-800 text-[10px] font-mono text-slate-400">VOL: ₹{lastTransaction?.transaction.amount?.toLocaleString() || '0'}</div>
+                      <div className={`px-2 py-1 rounded bg-slate-800 text-[10px] font-black ${getRiskColor(lastTransaction?.prediction.risk_level)}`}>RL: {lastTransaction?.prediction.risk_level || 'IDLE'}</div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Lower Section: Analyst Forensic Console */}
+              <div className="grid grid-cols-1 xl:grid-cols-12 gap-8">
+                <div className="xl:col-span-7 h-[400px]">
+                  <AnalystConsole transaction={lastTransaction?.transaction} prediction={lastTransaction?.prediction} />
+                </div>
+                
+                <div className="xl:col-span-5 h-[400px]">
+                   <div className="glass-card h-full flex flex-col overflow-hidden bg-slate-900/20">
+                      <div className="p-4 border-b border-white/5 bg-black/20 flex justify-between items-center">
+                        <span className="text-[10px] font-black uppercase tracking-widest text-slate-500">Forensic Stream</span>
+                        <span className="text-[9px] font-mono p-1 bg-emerald-500/10 text-emerald-500 rounded px-2">{data.length} BUFF</span>
+                      </div>
+                      <div className="flex-1 overflow-y-auto no-scrollbar font-mono text-[10px] p-4 space-y-2">
+                        {data.map((item, idx) => (
+                          <div 
+                            key={idx} 
+                            onClick={() => {/* Focus transaction */}}
+                            className="flex items-center justify-between p-2 rounded hover:bg-white/5 cursor-pointer transition-colors border border-transparent hover:border-white/5"
+                          >
+                            <span className="text-slate-500">{new Date(item.transaction.timestamp).toLocaleTimeString()}</span>
+                            <span className="text-slate-300 font-bold">{item.transaction.user_id}</span>
+                            <span className={`font-black ${getRiskColor(item.prediction?.risk_level)}`}>{item.prediction?.risk_level}</span>
+                          </div>
+                        ))}
+                      </div>
+                   </div>
                 </div>
               </div>
             </div>
+          )}
 
-            {/* Transaction Stream Table */}
-            <div className="bg-[#111620] border border-[#1e2738] rounded-2xl overflow-hidden shadow-2xl">
-              <div className="px-6 py-4 border-b border-[#1e2738] flex items-center justify-between bg-[#0d1219]">
-                <h3 className="text-xs font-bold text-gray-400 uppercase tracking-widest">Real-time Stream</h3>
-                <span className="text-[10px] font-mono px-3 py-1 rounded-full bg-emerald-500/10 text-emerald-500 font-black border border-emerald-500/20">{data.length} INGESTED</span>
-              </div>
-              <div className="overflow-x-auto">
-                <table className="w-full text-left text-sm">
-                  <thead className="bg-[#0a0e14] text-gray-600 uppercase text-[10px] font-black tracking-widest">
-                    <tr>
-                      <th className="px-6 py-4">Observed at</th>
-                      <th className="px-6 py-4">Transaction ID</th>
-                      <th className="px-6 py-4">User</th>
-                      <th className="px-6 py-4">Volume</th>
-                      <th className="px-6 py-4">Location</th>
-                      <th className="px-6 py-4">Satark Risk</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-[#1e2738]/30">
-                    {data.map((item, idx) => (
-                      <tr key={idx} className="hover:bg-white/5 transition-colors group">
-                        <td className="px-6 py-4 text-[10px] text-gray-600 font-mono italic">{new Date(item.transaction.timestamp).toLocaleTimeString()}</td>
-                        <td className="px-6 py-4 font-mono text-xs text-gray-400 group-hover:text-gray-200">{item.transaction.transaction_id}</td>
-                        <td className="px-6 py-4 text-emerald-500 font-bold">{item.transaction.user_id}</td>
-                        <td className="px-6 py-4 text-white font-extrabold">₹{item.transaction.amount?.toLocaleString()}</td>
-                        <td className="px-6 py-4 text-gray-500 font-medium">{item.transaction.location}</td>
-                        <td className="px-6 py-4">
-                          <span className={`inline-flex px-2.5 py-0.5 rounded text-[10px] font-black uppercase border-2 ${getRiskBadge(item.prediction?.risk_level)}`}>
-                            {item.prediction?.risk_level || 'SAFE'}
-                          </span>
-                        </td>
-                      </tr>
-                    ))}
-                    {data.length === 0 && (
-                      <tr><td colSpan="6" className="px-6 py-12 text-center text-gray-600 text-sm font-medium italic">Synchronizing with enterprise socket stream...</td></tr>
-                    )}
-                  </tbody>
-                </table>
+          {activeTab === 'graph' && (
+            <div className="max-w-[1400px] mx-auto space-y-5 animate-slide-up-subtle focus-within:">
+              <div className="h-[750px] glass-card overflow-hidden">
+                <FraudGraph userId={lastTransaction?.transaction.user_id || 'usr_1001'} API_URL={API_URL} />
               </div>
             </div>
-          </div>
-        )}
+          )}
 
-        {/* ════ ENTITY GRAPH ════ */}
-        {activeTab === 'graph' && (
-          <div className="max-w-[1400px] mx-auto space-y-5 animate-slide-up">
-            <h1 className="text-3xl font-bold text-white tracking-tight">Entity Graph</h1>
-            <p className="text-gray-500">Unified entity mapping for cross-account correlation and multi-node drift detection.</p>
-            <div className="bg-[#111620] border border-[#1e2738] rounded-2xl overflow-hidden shadow-2xl">
-              <FraudGraph
-                userId={lastTransaction ? lastTransaction.transaction.user_id : 'usr_1001'}
-                API_URL={API_URL}
-              />
-            </div>
-          </div>
-        )}
+          {activeTab === 'models' && <div className="animate-slide-up-subtle"><ModelCompare lastTransaction={lastTransaction} /></div>}
+          {activeTab === 'bank-network' && <div className="animate-slide-up-subtle"><BankPortal /></div>}
+          {activeTab === 'history' && <div className="animate-slide-up-subtle"><TransactionHistory /></div>}
+          {activeTab === 'settings' && <div className="animate-slide-up-subtle"><AccountSettings /></div>}
 
-        {/* ════ MODEL COMPARE ════ */}
-        {activeTab === 'models' && (
-          <div className="animate-slide-up">
-            <ModelCompare lastTransaction={lastTransaction} />
-          </div>
-        )}
-
-        {/* ════ SYSTEM LOGS ════ */}
-        {activeTab === 'history' && (
-          <div className="animate-slide-up">
-            <TransactionHistory />
-          </div>
-        )}
-
-        {/* ════ BANK NETWORK ════ */}
-        {activeTab === 'bank-network' && (
-          <div className="animate-slide-up">
-            <BankPortal />
-          </div>
-        )}
-
-        {/* ════ SETTINGS ════ */}
-        {activeTab === 'settings' && (
-          <div className="animate-slide-up">
-            <AccountSettings />
-          </div>
-        )}
+        </div>
       </main>
     </div>
   );
