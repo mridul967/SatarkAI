@@ -1,6 +1,9 @@
 import React, { useState } from 'react';
+import ParticleSphere from './ui/ParticleSphere';
+import NeuralNetworkBackground from './ui/NeuralNetworkBackground';
 import { useAuth } from '../contexts/AuthContext';
-import { ShieldCheck, Lock, User, Loader2 } from 'lucide-react';
+import { Lock, User, Loader2, ArrowRight } from 'lucide-react';
+import logo from '../logo.png';
 
 export default function Login() {
   const { login } = useAuth();
@@ -22,71 +25,95 @@ export default function Login() {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-[#0a0e14] p-4 font-sans">
-      <div className="max-w-md w-full animate-slide-up">
-        {/* Brand / Logo */}
-        <div className="text-center mb-8">
-          <div className="inline-flex items-center justify-center p-3 rounded-2xl bg-emerald-500/10 border border-emerald-500/20 mb-4">
-            <ShieldCheck className="w-10 h-10 text-emerald-500" />
+    <div className="relative min-h-screen bg-black overflow-hidden font-sans flex items-center justify-center p-8">
+
+      {/* Background Layer 1: Neural Network Grid */}
+      <div className="absolute inset-0 opacity-20 pointer-events-none">
+        <NeuralNetworkBackground />
+      </div>
+
+      {/* Background Layer 2: Particle Sphere (Centered or Hero position) */}
+      <div className="absolute inset-0 flex items-center justify-center pointer-events-none opacity-40">
+        <div className="w-full max-w-4xl transform scale-150 lg:scale-[1.8]">
+          <ParticleSphere />
+        </div>
+      </div>
+
+      {/* Background decorative glow */}
+      <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-full h-full bg-[#ff8c3c]/5 blur-[120px] pointer-events-none" />
+
+      {/* Login UI Container */}
+      <div className="relative z-20 max-w-md w-full animate-slide-up">
+        <div className="text-center mb-10">
+          <div className="inline-flex items-center justify-center mb-6 group transition-transform duration-500 hover:scale-110 cursor-default">
+            <img src={logo} alt="SatarkAI Logo" className="w-24 h-24 drop-shadow-[0_0_15px_rgba(255,255,255,0.1)]" />
           </div>
-          <h1 className="text-3xl font-extrabold text-white tracking-tight">SatarkAI</h1>
-          <p className="text-gray-500 mt-2 text-sm uppercase tracking-widest font-medium">Enterprise Fraud Intelligence</p>
+          <h1 className="text-4xl font-black text-white tracking-tighter mb-2">SatarkAI</h1>
+          <p className="text-[#a8976d] text-[10px] uppercase tracking-[0.3em] font-bold tracking-widest">Bharat Fraud Intelligence Engine</p>
         </div>
 
-        {/* Login Card */}
-        <div className="bg-[#111620] border border-[#1e2738] rounded-2xl p-8 shadow-2xl">
-          <form onSubmit={handleSubmit} className="space-y-6">
+        {/* Tactical Login Card (Solid Black) */}
+        <div className="bg-[#0a0e14] p-10 shadow-[0_0_50px_rgba(0,0,0,0.8)] border border-white/5 rounded-3xl relative overflow-hidden backdrop-blur-xl bg-opacity-90">
+          {/* Subtle card glow */}
+          <div className="absolute -top-24 -right-24 w-48 h-48 bg-[#ff8c3c]/5 blur-[60px] rounded-full pointer-events-none" />
+
+          <form onSubmit={handleSubmit} className="relative z-10 space-y-8">
             <div>
-              <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">Username</label>
-              <div className="relative">
-                <User className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-600" />
+              <label className="block text-[10px] font-black text-[#a8976d] uppercase tracking-widest mb-3">Username</label>
+              <div className="relative group">
+                <User className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-[#a8976d] group-focus-within:text-[#ff8c3c] transition-colors" />
                 <input
                   type="text"
                   required
                   value={username}
                   onChange={(e) => setUsername(e.target.value)}
-                  className="w-full bg-[#0a0e14] border border-[#1e2738] rounded-xl py-3 pl-10 pr-4 text-sm text-white focus:outline-none focus:border-emerald-500/50 transition-colors"
-                  placeholder="admin"
+                  className="w-full bg-[#000000] border border-white/5 rounded-xl py-4 pl-12 pr-4 text-sm text-white focus:outline-none focus:border-[#ff8c3c]/50 transition-all placeholder-white/5"
+                  placeholder="admin@satark"
                 />
               </div>
             </div>
 
             <div>
-              <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">Password</label>
-              <div className="relative">
-                <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-600" />
+              <label className="block text-[10px] font-black text-[#a8976d] uppercase tracking-widest mb-3">Password</label>
+              <div className="relative group">
+                <Lock className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-[#a8976d] group-focus-within:text-[#ff8c3c] transition-colors" />
                 <input
                   type="password"
                   required
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
-                  className="w-full bg-[#0a0e14] border border-[#1e2738] rounded-xl py-3 pl-10 pr-4 text-sm text-white focus:outline-none focus:border-emerald-500/50 transition-colors"
+                  className="w-full bg-[#000000] border border-white/5 rounded-xl py-4 pl-12 pr-4 text-sm text-white focus:outline-none focus:border-[#ff8c3c]/50 transition-all placeholder-white/5"
                   placeholder="••••••••"
                 />
               </div>
             </div>
 
-            {error && <div className="text-red-400 text-xs text-center">{error}</div>}
+            {error && <div className="text-red-400 text-xs text-center font-bold animate-shake">{error}</div>}
 
             <button
               type="submit"
               disabled={loading}
-              className="w-full bg-emerald-600 hover:bg-emerald-500 text-white font-bold py-3.5 rounded-xl transition-all shadow-lg shadow-emerald-600/20 active:scale-[0.98] disabled:opacity-50 flex items-center justify-center space-x-2"
+              className="w-full bg-[#ff8c3c] hover:bg-[#ff9d57] text-white font-black py-4 rounded-xl transition-all shadow-xl shadow-[#ff8c3c]/20 active:scale-[0.98] disabled:opacity-50 flex items-center justify-center space-x-3 group relative overflow-hidden"
             >
               {loading ? (
-                <Loader2 className="w-5 h-5 animate-spin" />
+                <Loader2 className="w-6 h-6 animate-spin" />
               ) : (
                 <>
-                  <span>Sign In</span>
+                  <span className="uppercase tracking-widest text-xs font-bold">Authorize Access</span>
+                  <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
                 </>
               )}
             </button>
           </form>
         </div>
 
-        <div className="text-center mt-8">
-          <p className="text-gray-600 text-xs tracking-wide">
-            हर लेन-देन पर नज़र &copy; 2026 SatarkAI Systems
+        {/* Branding Footer */}
+        <div className="text-center mt-12 pb-4">
+          <div className="text-[10px] font-black uppercase tracking-[0.4em] text-white opacity-20 mb-4">
+            SatarkAI · Neural Forensic Node · 2026
+          </div>
+          <p className="text-[#a8976d] text-[10px] tracking-[0.2em] font-medium uppercase opacity-60 hover:opacity-100 transition-opacity">
+            हर लेन-देने पर नज़र &copy; 2026 SatarkAI Systems
           </p>
         </div>
       </div>

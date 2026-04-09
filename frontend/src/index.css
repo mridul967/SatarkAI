@@ -5,29 +5,25 @@
 @tailwind utilities;
 
 :root {
-  /* Core Palette (Cyber Dark) */
-  --bg-deep: #05070a;
-  --bg-surface: #0d1219;
-  --bg-card: rgba(17, 22, 32, 0.7);
+  --bg-beige: #f0f0ee;
+  --text-black: #1c1a18;
+  --orange: #ff8c3c;
+  --card: rgba(0, 0, 0, 0.65);
   
   /* System Accents */
-  --primary: #10b981;        /* Emerald */
-  --primary-glow: rgba(16, 185, 129, 0.4);
-  --error: #ff4d4d;          /* Cyber Red */
+  --error: #ff4d4d;
   --error-glow: rgba(255, 77, 77, 0.4);
-  --warning: #f59e0b;       /* Amber */
-  --info: #3b82f6;          /* Cobalt Blue */
-  
-  /* Surfaces & Glass */
-  --glass-border: rgba(255, 255, 255, 0.08);
-  --glass-bg: rgba(255, 255, 255, 0.03);
+  --warning: #f59e0b;
+  --info: #3b82f6;
+  --glass-border: rgba(0, 0, 0, 0.08);
+  --glass-bg: rgba(0, 0, 0, 0.6);
 }
 
 body {
   margin: 0;
   font-family: 'Inter', sans-serif;
-  background-color: var(--bg-deep);
-  color: #e2e8f0;
+  background: var(--bg-beige);
+  color: var(--text-black);
   overflow: hidden;
   -webkit-font-smoothing: antialiased;
 }
@@ -36,19 +32,17 @@ code, .font-mono {
   font-family: 'Roboto Mono', monospace;
 }
 
-/* Glassmorphism Utilities */
+/* Tactical Box Utilities (Solid Black) */
 .glass-card {
-  background: var(--glass-bg);
-  backdrop-filter: blur(12px);
-  -webkit-backdrop-filter: blur(12px);
-  border: 1px solid var(--glass-border);
-  border-radius: 1rem;
+  background: #0a0e14;
+  border: 1px solid rgba(255, 140, 60, 0.1);
+  border-radius: 16px;
+  color: #f0f0ee; /* Ensure text inside dark cards is readable */
 }
 
 .glass-panel {
-  background: rgba(13, 18, 25, 0.8);
-  backdrop-filter: blur(20px);
-  border-right: 1px solid var(--glass-border);
+  background: #000000;
+  border-right: 1px solid rgba(255, 140, 60, 0.1);
 }
 
 /* Glowing Elements */

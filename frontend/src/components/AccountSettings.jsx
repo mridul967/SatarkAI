@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
-import { Save, Key, ShieldCheck, Loader2, AlertCircle, CheckCircle2 } from 'lucide-react';
+import { Save, Key, Loader2, AlertCircle, CheckCircle2 } from 'lucide-react';
+import logo from '../logo.png';
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000';
 
@@ -120,9 +120,11 @@ export default function AccountSettings() {
         </div>
 
         <div className="space-y-6">
-          <div className="bg-emerald-500/5 border border-emerald-500/20 rounded-2xl p-6">
+          <div className="bg-[#ff8c3c]/5 border border-[#ff8c3c]/20 rounded-2xl p-6">
             <div className="flex items-center space-x-3 mb-4">
-              <ShieldCheck className="w-6 h-6 text-emerald-500" />
+              <div className="w-10 h-10 bg-white rounded-lg p-1 shadow-sm">
+                <img src={logo} alt="Security" className="w-full h-full object-contain" />
+              </div>
               <h3 className="font-bold text-white uppercase tracking-widest text-xs">Security Note</h3>
             </div>
             <p className="text-xs text-gray-400 leading-relaxed">

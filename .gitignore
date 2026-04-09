@@ -33,3 +33,8 @@ documentation/PROJECT_PHASES.md
 # Blockchain (Hardhat)
 artifacts/
 cache/
+
+*.md
+!README.md
+
+*.txt
