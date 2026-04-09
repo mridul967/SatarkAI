@@ -7,6 +7,7 @@ import FraudGraph from './components/FraudGraph';
 import ModelCompare from './components/ModelCompare';
 import TransactionHistory from './components/TransactionHistory';
 import AccountSettings from './components/AccountSettings';
+import BankPortal from './components/BankPortal';
 import Login from './components/Login';
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000';
@@ -37,6 +38,7 @@ function App() {
     { id: 'graph', label: 'Entity Graph', icon: GitGraph },
     { id: 'models', label: 'LLM Models', icon: BrainCircuit },
     { id: 'history', label: 'System Logs', icon: Database },
+    { id: 'bank-network', label: 'Bank Network', icon: BookOpen },
     { id: 'settings', label: 'Settings', icon: Settings },
   ];
 
@@ -269,6 +271,13 @@ function App() {
         {activeTab === 'history' && (
           <div className="animate-slide-up">
             <TransactionHistory />
+          </div>
+        )}
+
+        {/* ════ BANK NETWORK ════ */}
+        {activeTab === 'bank-network' && (
+          <div className="animate-slide-up">
+            <BankPortal />
           </div>
         )}
 
