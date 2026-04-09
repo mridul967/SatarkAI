@@ -34,7 +34,6 @@ documentation/PROJECT_PHASES.md
 artifacts/
 cache/
 
-*.md
-!README.md
+
 
 *.txt
