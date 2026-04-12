@@ -1,0 +1,96 @@
+.dark-circuit-wrapper {
+  height: 100vh;
+  width: 100%;
+  position: absolute;
+  top: 0;
+  left: 0;
+  background-color: #000000;
+  overflow: hidden;
+  z-index: 9999; /* Ensure it covers everything */
+}
+
+.dark-circuit-background {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+
+  background-image: repeating-linear-gradient(
+      0deg,
+      transparent,
+      transparent 19px,
+      rgba(255, 106, 0, 0.1) 19px,
+      rgba(255, 106, 0, 0.1) 20px
+    ),
+    repeating-linear-gradient(
+      90deg,
+      transparent,
+      transparent 19px,
+      rgba(255, 106, 0, 0.1) 19px,
+      rgba(255, 106, 0, 0.1) 20px
+    );
+
+  background-size: 40px 40px;
+}
+
+/* Center container */
+.center-container {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  text-align: center;
+  z-index: 10;
+  display: flex;
+  flex-direction: column;
+  items-align: center;
+  justify-content: center;
+}
+
+/* Logo */
+.logo-intro {
+  width: 280px;
+  margin: 0 auto 40px auto;
+  opacity: 0;
+  animation: fadeIn 1.5s ease forwards;
+  filter: drop-shadow(0 0 25px rgba(255, 106, 0, 0.4));
+}
+
+/* SVG text stroke animation */
+.stroke-text {
+  width: 650px;
+  margin: 0 auto;
+}
+
+.stroke-text text.writing-text {
+  font-family: "Brush Script MT", "Pacifico", cursive;
+  font-size: 150px;
+  fill: none;
+  stroke: #FF6A00;
+  stroke-width: 3;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  stroke-dasharray: 1500;
+  stroke-dashoffset: 1500;
+  animation: draw 1.5s linear forwards, fillIn 0.3s ease forwards 1.6s;
+  filter: drop-shadow(0 0 10px rgba(255,106,0,0.5));
+}
+
+/* Animations */
+@keyframes draw {
+  to {
+    stroke-dashoffset: 0;
+  }
+}
+
+@keyframes fillIn {
+  to {
+    fill: #FF6A00;
+  }
+}
+
+@keyframes fadeIn {
+  to {
+    opacity: 1;
+  }
+}

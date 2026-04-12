@@ -17,13 +17,17 @@ import AccountSettings from './components/AccountSettings';
 import BankPortal from './components/BankPortal';
 import AnalystConsole from './components/AnalystConsole';
 import Login from './components/Login';
+import Intro from './components/Intro';
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000';
 
 function App() {
   const { user, logout } = useAuth();
   const [activeTab, setActiveTab] = useState('dashboard');
+  const [showIntro, setShowIntro] = useState(true);
   const { isConnected, lastTransaction, data } = useWebSocket('ws://localhost:8000/ws/transactions');
+
+  if (showIntro) return <Intro onComplete={() => setShowIntro(false)} />;
 
   if (!user) return <Login />;
 

@@ -22,7 +22,7 @@
 body {
   margin: 0;
   font-family: 'Inter', sans-serif;
-  background: var(--bg-beige);
+  background: #000000;
   color: var(--text-black);
   overflow: hidden;
   -webkit-font-smoothing: antialiased;
