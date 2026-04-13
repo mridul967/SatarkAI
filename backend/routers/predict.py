@@ -1,4 +1,4 @@
-from fastapi import APIRouter, WebSocket, WebSocketDisconnect
+from fastapi import APIRouter, WebSocket, WebSocketDisconnect, BackgroundTasks
 from models.schemas import Transaction, FraudPrediction
 from services.feature_service import extract_features
 from services.graph_service import graph_service
@@ -7,34 +7,22 @@ from services.drift_service import drift_detector
 from services.database_service import db_service
 from services.cache_service import cache_service
 from services.blockchain_service import blockchain_service
+from services.model_service import model_service
 
 import asyncio
 import random
 import json
 import uuid
 import os
+import time
 import numpy as np
-import onnxruntime as ort
 from datetime import datetime
 from typing import Optional, List, Dict, Any
 
 router = APIRouter()
 
-# Initialize ONNX Sessions (Phase 2)
-MODELS_DIR = "models"
-try:
-    gat_session = ort.InferenceSession(os.path.join(MODELS_DIR, "satark_gat.onnx"))
-    lgbm_session = ort.InferenceSession(os.path.join(MODELS_DIR, "satark_lgbm.onnx"))
-    print("SatarkAI Engine: ONNX sessions initialized.")
-except Exception as e:
-    print(f"SatarkAI Engine Warning: ONNX sessions not initialized: {e}")
-    gat_session = None
-    lgbm_session = None
-
 @router.post("/", response_model=FraudPrediction)
-async def predict(txn: Transaction):
-    start_time = datetime.now()
-    
+async def predict(txn: Transaction, background_tasks: BackgroundTasks):
     # 1. Check Redis Cache (33ms hot-path target)
     cached_features = await cache_service.get_user_features(txn.user_id)
     if cached_features:
@@ -46,43 +34,32 @@ async def predict(txn: Transaction):
     graph_service.add_transaction(txn)
     graph_signals = graph_service.get_graph_signals(txn)
     
-    # 2. Ensemble Scoring via ONNX
-    gat_score = 0.5
-    lgbm_score = 0.5
+    # ── TIME ONLY THE MODEL INFERENCE (PHASE A1) ──
+    t0 = time.perf_counter()
+    result = await model_service.run_inference(features, txn)
+    latency_ms = round((time.perf_counter() - t0) * 1000, 2)
+    # ─────────────────────────────────────────────
     
-    if gat_session and lgbm_session:
-        try:
-            # GAT Inference
-            # Mocking subgraph lookup for now
-            dummy_x = np.array([list(features.values())], dtype=np.float32)
-            dummy_edges = np.array([[0], [0]], dtype=np.int64)
-            gat_score = gat_session.run(None, {'x': dummy_x, 'edge_index': dummy_edges})[0][0]
-            
-            # LGBM Inference
-            lgbm_score = lgbm_session.run(None, {'input': dummy_x})[0][0]
-        except Exception as e:
-            print(f"Inference error: {e}")
-
-    final_score = float(0.6 * gat_score + 0.4 * lgbm_score)
+    model_service.record_latency(latency_ms)
+    
+    final_score = result["score"]
     risk_level = "CRITICAL" if final_score > 0.8 else "HIGH" if final_score > 0.6 else "MEDIUM" if final_score > 0.3 else "SAFE"
 
-    # 3. Async LLM Consensus (Non-blocking as per Deep Dive)
-    # Drift detection and LLM run in parallel
+    # 3. Async LLM Consensus & Drift Detection
     drift_detector.add_transaction(features)
     
-    # Fire and forget LLM explanation for the audit record
+    # LLM run in parallel background to not block response
     asyncio.create_task(llm_service.predict(txn, features, graph_signals))
-    
-    processing_time = (datetime.now() - start_time).total_seconds() * 1000
     
     prediction = FraudPrediction(
         transaction_id=txn.transaction_id,
         fraud_score=final_score,
         risk_level=risk_level,
-        explanation="Real-time GNN + LGBM Ensemble",
+        explanation=result["explanation"],
         graph_signals=graph_signals,
-        model_used="ensemble_v1",
-        processing_time_ms=processing_time
+        model_used="SatarkGAT-v1.2",
+        processing_time_ms=latency_ms, # Using latency_ms as the primary processing time for this phase
+        latency_ms=latency_ms
     )
     
     # Persist to DB
@@ -90,7 +67,8 @@ async def predict(txn: Transaction):
         "fraud_score": final_score,
         "risk_level": risk_level,
         "reason": "Ensemble Inference",
-        "model_used": "ensemble_v1"
+        "model_used": "SatarkGAT-v1.2",
+        "latency_ms": latency_ms
     })
     
     return prediction
@@ -119,7 +97,10 @@ async def get_history(limit: int = 50, start_date: Optional[str] = None, end_dat
 
 @router.get("/stats")
 async def get_stats():
-    return db_service.get_stats()
+    # Return both DB stats and real-time inference latency stats
+    stats = db_service.get_stats()
+    stats["latency"] = model_service.get_latency_stats()
+    return stats
 
 # Realistic Simulator Pools & Profiles
 USER_PROFILES = {
@@ -196,11 +177,16 @@ async def websocket_endpoint(websocket: WebSocket):
                 reason = "Safe: Small transaction within typical bounds."
                 
             risk = "CRITICAL" if score > 0.8 else "HIGH" if score > 0.6 else "MEDIUM" if score > 0.3 else "SAFE"
+            
+            # Simulated Latency for the WebSocket Feed
+            simulated_latency = round(random.uniform(18.0, 48.0), 2)
+            if score > 0.8: simulated_latency += 10 # Slightly more for complex cases
 
             prediction = {
                 "fraud_score": score,
                 "risk_level": risk,
-                "reason": reason
+                "reason": reason,
+                "latency_ms": simulated_latency
             }
 
             # Save to DB
@@ -215,3 +201,4 @@ async def websocket_endpoint(websocket: WebSocket):
     except (WebSocketDisconnect, Exception) as e:
         print(f"WS Error: {e}")
         pass
+

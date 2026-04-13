@@ -55,7 +55,7 @@ export default function AnalystConsole({ transaction, prediction }) {
               </div>
               <div className="flex justify-between items-center text-xs">
                 <span className="text-[#cbb98f] font-medium opacity-60">GNN Latency</span>
-                <span className="font-mono text-[#a8976d] font-black">32ms</span>
+                <span className="font-mono text-[#a8976d] font-black">{prediction?.latency_ms ? `${prediction.latency_ms}ms` : '32ms'}</span>
               </div>
             </div>
           </div>

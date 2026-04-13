@@ -18,6 +18,7 @@ import BankPortal from './components/BankPortal';
 import AnalystConsole from './components/AnalystConsole';
 import Login from './components/Login';
 import Intro from './components/Intro';
+import LatencyBadge from './components/LatencyBadge';
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000';
 
@@ -198,7 +199,10 @@ function App() {
                             >
                               <span className="text-[#a8976d] opacity-50">{new Date(item.transaction.timestamp).toLocaleTimeString()}</span>
                               <span className="text-white font-bold tracking-tight">{item.transaction.user_id}</span>
-                              <span className={`font-black ${getRiskColor(item.prediction?.risk_level)}`}>{item.prediction?.risk_level}</span>
+                              <div className="flex items-center gap-4">
+                                <LatencyBadge ms={item.prediction?.latency_ms} />
+                                <span className={`font-black ${getRiskColor(item.prediction?.risk_level)}`}>{item.prediction?.risk_level}</span>
+                              </div>
                             </div>
                           ))}
                         </div>
