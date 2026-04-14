@@ -7,8 +7,8 @@ import logo from '../logo.png';
 
 export default function Login() {
   const { login } = useAuth();
-  const [username, setUsername] = useState('admin');
-  const [password, setPassword] = useState('test123');
+  const [username, setUsername] = useState('');
+  const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
 
@@ -18,7 +18,7 @@ export default function Login() {
     setError('');
 
     if (username !== 'admin' || password !== 'test123') {
-      setError('Invalid security credentials. Try admin / test123');
+      setError('Invalid security credentials.');
       setLoading(false);
       return;
     }
