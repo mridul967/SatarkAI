@@ -18,11 +18,15 @@ def extract_features(txn: Transaction) -> dict:
     merchant_risk = float(hash(txn.merchant_id) % 100) / 100.0
     velocity_flag = False
     
+    # Mock deterministic account age for Census logic
+    account_age_days = (hash(txn.user_id) % 180) + 1  # 1 to 180 days
+    
     return {
         "amount_log": amount_log,
         "hour_sin": hour_sin,
         "hour_cos": hour_cos,
         "amount_zscore": amount_zscore,
         "merchant_risk": merchant_risk,
-        "velocity_flag": velocity_flag
+        "velocity_flag": velocity_flag,
+        "account_age_days": account_age_days
     }

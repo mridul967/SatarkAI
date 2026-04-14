@@ -62,14 +62,24 @@ async def predict(txn: Transaction, background_tasks: BackgroundTasks):
         latency_ms=latency_ms
     )
     
-    # Persist to DB
-    db_service.save_transaction(txn.model_dump(), {
-        "fraud_score": final_score,
-        "risk_level": risk_level,
-        "reason": "Ensemble Inference",
-        "model_used": "SatarkGAT-v1.2",
-        "latency_ms": latency_ms
-    })
+    # ── TIERED STORAGE CENSUS (DPDP ACT COMPLIANCE) ──
+    STORE_FULL    = final_score > 0.55                          # CRITICAL + SUSPICIOUS always
+    NEW_USER      = features.get("account_age_days", 999) < 30
+    RANDOM_SAMPLE = random.random() < 0.02                      # 2% of safe traffic
+
+    if STORE_FULL or NEW_USER or RANDOM_SAMPLE:
+        # Save full forensic record
+        db_service.save_transaction(txn.model_dump(), {
+            "fraud_score": final_score,
+            "risk_level": risk_level,
+            "reason": result["explanation"],
+            "model_used": "SatarkGAT-v1.2",
+            "latency_ms": latency_ms,
+            "graph_signals": graph_signals
+        })
+    else:
+        # Store only aggregated behavioral benchmarks
+        db_service.update_user_aggregate(txn.model_dump())
     
     return prediction
 

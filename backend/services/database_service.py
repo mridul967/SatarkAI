@@ -50,6 +50,15 @@ class DatabaseService:
                 created_at TEXT DEFAULT CURRENT_TIMESTAMP
             )
         """)
+        cursor.execute("""
+            CREATE TABLE IF NOT EXISTS user_aggregates (
+                user_id TEXT PRIMARY KEY,
+                avg_amount REAL,
+                transaction_count INTEGER,
+                device_diversity_count INTEGER,
+                last_update TEXT DEFAULT CURRENT_TIMESTAMP
+            )
+        """)
         conn.commit()
         conn.close()
 
@@ -82,6 +91,31 @@ class DatabaseService:
             conn.commit()
         except Exception as e:
             print(f"DB save error: {e}")
+    def update_user_aggregate(self, txn_data: dict):
+        conn = self._get_conn()
+        try:
+            # 1. Fetch current aggregates
+            row = conn.execute("SELECT * FROM user_aggregates WHERE user_id = ?", (txn_data["user_id"],)).fetchone()
+            
+            if row:
+                old_avg = row["avg_amount"]
+                count = row["transaction_count"] + 1
+                new_avg = old_avg + (txn_data["amount"] - old_avg) / count
+                
+                # Update (simulating diversity count as a fixed increment for mock)
+                conn.execute("""
+                    UPDATE user_aggregates 
+                    SET avg_amount = ?, transaction_count = ?, last_update = CURRENT_TIMESTAMP
+                    WHERE user_id = ?
+                """, (new_avg, count, txn_data["user_id"]))
+            else:
+                conn.execute("""
+                    INSERT INTO user_aggregates (user_id, avg_amount, transaction_count, device_diversity_count)
+                    VALUES (?, ?, 1, 1)
+                """, (txn_data["user_id"], txn_data["amount"]))
+            conn.commit()
+        except Exception as e:
+            print(f"DB aggregate update error: {e}")
         finally:
             conn.close()
 
