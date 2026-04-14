@@ -1,60 +1,71 @@
 import lightgbm as lgb
 import pandas as pd
 import numpy as np
-from sklearn.model_selection import StratifiedKFold
-from sklearn.metrics import f1_score, average_precision_score
 import pickle
+import os
+
+# Path handling
+BASE_PATH = "backend/" if os.path.exists("backend") else ""
+DATA_FILE  = f"{BASE_PATH}ml/data/satark_train_tabular.parquet"
+MODEL_PATH = f"{BASE_PATH}models/satark_lgbm.pkl"
 
 def train_lgbm():
-    try:
-        df = pd.read_parquet('data/satark_train.parquet')
-    except:
-        print("Data source 'satark_train.parquet' missing. Cannot execute LightGBM training yet.")
-        return [], 0.5
+    if not os.path.exists(DATA_FILE):
+        print(f"Error: Training data {DATA_FILE} not found. Run prepare_training_data.py first.")
+        return
         
-    feature_cols = ['amount_log', 'hour_sin', 'hour_cos', 'merchant_id']
-    X = df[feature_cols].fillna(-999)
+    print("Loading tabular data...")
+    df = pd.read_parquet(DATA_FILE)
+    
+    # Identify label and features
     y = df['label']
+    X = df.drop(columns=['label', 'entity_string', 'entity_id', 'TransactionID'], errors='ignore')
     
-    skf = StratifiedKFold(n_splits=5, shuffle=True, random_state=42)
-    oof_preds = np.zeros(len(df))
-    
+    print(f"Training LightGBM on {len(df)} rows with {X.shape[1]} features...")
+
+    # Parameters optimized for fraud detection (high imbalance)
     params = {
         'objective': 'binary',
-        'metric': 'average_precision',
+        'metric': 'auc',
         'learning_rate': 0.05,
-        'num_leaves': 63,
-        'min_child_samples': 20,
-        'scale_pos_weight': (y == 0).sum() / (y == 1).sum(),
+        'num_leaves': 31,
         'feature_fraction': 0.8,
-        'bagging_fraction': 0.8,
+        'bagging_fraction': 0.7,
         'bagging_freq': 5,
+        'scale_pos_weight': (y == 0).sum() / (y == 1).sum(), # Handle imbalance
         'verbose': -1,
+        'seed': 42
     }
     
-    models = []
-    for fold, (train_idx, val_idx) in enumerate(skf.split(X, y)):
-        X_tr, X_val = X.iloc[train_idx], X.iloc[val_idx]
-        y_tr, y_val = y.iloc[train_idx], y.iloc[val_idx]
-        
-        model = lgb.train(
-            params,
-            lgb.Dataset(X_tr, y_tr),
-            num_boost_round=1000,
-            valid_sets=[lgb.Dataset(X_val, y_val)],
-            callbacks=[lgb.early_stopping(50), lgb.log_evaluation(100)]
-        )
-        oof_preds[val_idx] = model.predict(X_val)
-        models.append(model)
+    # Split for simple validation
+    train_size = int(0.8 * len(df))
+    X_train, X_val = X[:train_size], X[train_size:]
+    y_train, y_val = y[:train_size], y[train_size:]
     
-    auprc = average_precision_score(y, oof_preds)
-    threshold = np.percentile(oof_preds[y == 1], 20)
-    print(f"LightGBM OOF — AUPRC: {auprc:.4f} | Threshold: {threshold:.4f}")
+    dtrain = lgb.Dataset(X_train, label=y_train)
+    dval   = lgb.Dataset(X_val, label=y_val, reference=dtrain)
     
-    with open('models/satark_lgbm.pkl', 'wb') as f:
-        pickle.dump({'models': models, 'threshold': threshold}, f)
+    model = lgb.train(
+        params,
+        dtrain,
+        num_boost_round=500,
+        valid_sets=[dval],
+        callbacks=[
+            lgb.early_stopping(stopping_rounds=30),
+            lgb.log_evaluation(period=50)
+        ]
+    )
     
-    return models, threshold
+    print("✓ LightGBM training complete.")
+    
+    # Save model and feature names (critical for ONNX conversion)
+    os.makedirs(os.path.dirname(MODEL_PATH), exist_ok=True)
+    with open(MODEL_PATH, 'wb') as f:
+        pickle.dump({
+            'model': model,
+            'features': list(X.columns)
+        }, f)
+    print(f"Model saved to {MODEL_PATH}")
 
 if __name__ == '__main__':
     train_lgbm()

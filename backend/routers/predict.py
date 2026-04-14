@@ -170,7 +170,7 @@ async def websocket_endpoint(websocket: WebSocket):
             graph_service.add_transaction(txn_obj)
 
             # Realistic Scoring Logic for Simulator
-            score = 0.1
+            score = round(random.uniform(0.05, 0.50), 2)
             reason = "Legitimate profile"
             
             if behavior == "fraudster" and amount > 15000:

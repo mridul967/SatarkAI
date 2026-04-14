@@ -43,4 +43,7 @@ SatarkAI.md
 SIMULATION.md
 technicaldeepdives.md
 
-*.txt
+*.txtbackend/ml/data/
+backend/ml/data
+backend/ml/data/*
+backend/models/*.onnx.data

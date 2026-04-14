@@ -1,5 +1,5 @@
 import React from 'react';
-import { Terminal, ShieldAlert, Cpu, Network, Clock, ExternalLink } from 'lucide-react';
+import { Terminal, ShieldAlert, Cpu, Network, Clock, ExternalLink, BrainCircuit } from 'lucide-react';
 
 export default function AnalystConsole({ transaction, prediction }) {
   if (!transaction) return (
@@ -19,79 +19,98 @@ export default function AnalystConsole({ transaction, prediction }) {
   };
 
   return (
-    <div className="h-full space-y-6 animate-slide-up">
-      <div className="flex items-center justify-between">
+    <div className="h-full space-y-6 animate-slide-up flex flex-col">
+      <div className="flex items-center justify-between px-2">
         <div className="flex items-center gap-4">
-          <div className="p-3 bg-[#ff8c3c]/10 rounded-xl border border-[#ff8c3c]/20 shadow-[0_0_15px_rgba(255,140,60,0.1)]">
-            <ShieldAlert className="w-6 h-6 text-[#ff8c3c]" />
+          <div className="p-3 bg-black rounded-2xl border border-black/5 shadow-[0_0_15px_rgba(255,140,60,0.1)] relative overflow-hidden group hover:bg-[#0a0e14] cursor-pointer transition-all">
+            <div className="absolute inset-0 bg-[#ff8c3c]/10 opacity-0 group-hover:opacity-100 transition-opacity"></div>
+            <ShieldAlert className="w-5 h-5 text-[#ff8c3c] relative z-10 group-hover:scale-110 transition-transform" />
           </div>
           <div>
-            <h2 className="text-xl font-black uppercase tracking-tighter text-black">Forensic Pulse </h2>
-            <div className="text-[10px] font-mono text-[#a8976d] font-bold">NODE_ID / #{transaction.transaction_id}</div>
+            <h2 className="text-[11px] font-black uppercase tracking-[0.4em] text-black/80">Forensic Pulse </h2>
+            <div className="text-[9px] font-mono text-[#a8976d] font-bold mt-1 tracking-widest">{transaction.transaction_id}</div>
           </div>
         </div>
         <div className="flex gap-2">
-          <span className="px-4 py-2 rounded-xl bg-white/5 text-[10px] font-mono text-[#e6d3a3] border border-white/5 flex items-center gap-2">
-            <Clock className="w-3.5 h-3.5 text-[#ff8c3c]" /> {new Date(transaction.timestamp).toLocaleTimeString()}
+          <span className="px-4 py-2.5 rounded-xl bg-white border border-black/5 text-[10px] font-mono text-[#a8976d] flex items-center gap-2 hover:bg-black hover:text-[#e6d3a3] cursor-pointer transition-colors shadow-sm font-bold">
+             {new Date(transaction.timestamp).toLocaleTimeString()} <Clock className="w-3.5 h-3.5" />
           </span>
         </div>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6 h-[calc(100%-100px)]">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-8 flex-1 min-h-0">
         {/* Signal Panel */}
-        <div className="glass-card bg-black p-6 space-y-8 flex flex-col border-none shadow-2xl">
-          <div>
-            <h3 className="text-[11px] font-black uppercase tracking-[0.34em] text-[#a8976d] mb-6 flex items-center gap-2">
-              <Network className="w-4 h-4 text-[#ff8c3c]" /> Relational Signals
+        <div className="bg-[#0a0e14] rounded-3xl p-8 flex flex-col border border-black/5 shadow-2xl transition-all duration-500 hover:shadow-[#ff8c3c]/10 hover:-translate-y-1 cursor-pointer">
+          <div className="mb-8 flex justify-between items-center">
+            <h3 className="text-[10px] font-black uppercase tracking-[0.3em] text-[#a8976d] flex items-center gap-2">
+              <Network className="w-3.5 h-3.5 text-[#ff8c3c]" /> Relational Signals
             </h3>
-            <div className="space-y-4">
-              <div className="flex justify-between items-center text-xs">
-                <span className="text-[#cbb98f] font-medium opacity-60">Device Linkage</span>
-                <span className="font-mono text-[#ff8c3c] font-black">STABLE</span>
-              </div>
-              <div className="flex justify-between items-center text-xs">
-                <span className="text-[#cbb98f] font-medium opacity-60">IP Velocity</span>
-                <span className="font-mono text-[#ff8c3c] font-black">NORMAL</span>
-              </div>
-              <div className="flex justify-between items-center text-xs">
-                <span className="text-[#cbb98f] font-medium opacity-60">GNN Latency</span>
-                <span className="font-mono text-[#a8976d] font-black">{prediction?.latency_ms ? `${prediction.latency_ms}ms` : '32ms'}</span>
-              </div>
+            <div className="w-1.5 h-1.5 bg-[#a8976d] rounded-full opacity-50 shadow-[0_0_5px_rgba(168,151,109,0.5)]"></div>
+          </div>
+          <div className="space-y-5 mb-8">
+            <div className="flex justify-between items-center text-[10px] group border-b border-white/5 pb-3">
+              <span className="text-[#cbb98f] font-bold opacity-60 group-hover:opacity-100 transition-opacity uppercase tracking-widest flex items-center gap-2">
+                <span className="w-1 h-3 bg-white/10 rounded-full group-hover:bg-[#ff8c3c] transition-colors"></span> Device Hash
+              </span>
+              <span className="font-mono text-[#e6d3a3] font-black bg-white/5 px-2.5 py-1 rounded-lg tracking-wider border border-white/5">{transaction.device_id.substring(0, 8)}</span>
+            </div>
+            <div className="flex justify-between items-center text-[10px] group border-b border-white/5 pb-3">
+              <span className="text-[#cbb98f] font-bold opacity-60 group-hover:opacity-100 transition-opacity uppercase tracking-widest flex items-center gap-2">
+                <span className="w-1 h-3 bg-white/10 rounded-full group-hover:bg-[#ff8c3c] transition-colors"></span> Geo Location
+              </span>
+              <span className="font-mono text-white font-black tracking-wider">{transaction.location}</span>
+            </div>
+            <div className="flex justify-between items-center text-[10px] group pb-1">
+              <span className="text-[#cbb98f] font-bold opacity-60 group-hover:opacity-100 transition-opacity uppercase tracking-widest flex items-center gap-2">
+                <span className="w-1 h-3 bg-white/10 rounded-full group-hover:bg-[#ff8c3c] transition-colors"></span> Process Latency
+              </span>
+              <span className="font-mono text-[#ff8c3c] font-black tracking-wider">{prediction?.latency_ms ? `${prediction.latency_ms}ms` : '---'}</span>
             </div>
           </div>
 
-          <div className="flex-1 bg-[#05070a] rounded-2xl p-6 border border-white/5 font-mono text-[11px] space-y-3 overflow-y-auto no-scrollbar shadow-inner">
-            <div className="text-[#ff8c3c]/30">_INITIALIZING_NEURAL_CHECK...</div>
-            <div className="text-[#ffb36b]/60">&gt; CHECKING CROSS_BANK_REGISTRY (PHASE 3)</div>
-            <div className="text-[#a8976d]/40">&gt; NO_ON_CHAIN_SIGNALS_FOUND</div>
-            <div className="text-[#ff8c3c]/80">&gt; WEIGHTED_GNN_SCORE: {(prediction?.fraud_score || 0).toFixed(4)}</div>
-            <div className="text-white/10 mt-2">--------------------------------</div>
-            <div className="text-white/90 mt-2 leading-relaxed opacity-80">INCIDENT_ROOT_CAUSE: {prediction?.explanation?.split('.')[0]}</div>
+          <div className="flex-1 bg-[#12161f] rounded-2xl p-6 border border-white/5 font-mono text-[10px] space-y-3 overflow-y-auto custom-scrollbar shadow-inner relative">
+            <div className="text-[#ff8c3c]/40 flex items-center gap-2 font-bold"><span className="w-1.5 h-1.5 bg-[#ff8c3c]/60 rounded-full animate-ping"></span> _EXEC_NEURAL_CHECKS</div>
+            <div className="text-[#ffb36b]/60 hover:text-[#ffb36b] transition-colors cursor-text">&gt; QUERY_GRAPH_DB [OK]</div>
+            <div className="text-[#a8976d]/60 hover:text-[#a8976d] transition-colors cursor-text">&gt; CHECKING_NODE_VELOCITY ... </div>
+            <div className="text-white border-l-2 border-[#ff8c3c] pl-3 my-3 ml-1 bg-white/5 py-1 text-[11px]">&gt; TARGET SCORE: {(prediction?.fraud_score || 0).toFixed(4)}</div>
+            <div className="text-white/10 mt-3 border-t border-white/10 pt-3"></div>
+            <div className="text-[#e6d3a3] font-sans text-[11px] italic opacity-80 leading-relaxed font-medium">
+              &lt; {(prediction?.explanation || '').split('.')[0] || 'Validating behavior footprints...'} &gt;
+            </div>
           </div>
         </div>
 
         {/* AI Consolidation */}
-        <div className="glass-card bg-black/50 p-6 space-y-6 flex flex-col border-none shadow-2xl">
-          <h3 className="text-[11px] font-black uppercase tracking-[0.3em] text-[#a8976d] flex items-center gap-2">
-            <Cpu className="w-4 h-4 text-[#ffb36b]" /> Consensus Insight
-          </h3>
-          <div className="p-6 rounded-2xl bg-[#ff8c3c]/5 border border-[#ff8c3c]/10 italic text-sm text-[#e6d3a3] leading-relaxed opacity-90 shadow-inner">
-            "{prediction?.explanation || "Legitimate pattern detected across all vectors."}"
+        <div className="bg-[#12161f] rounded-3xl p-8 space-y-8 flex flex-col border border-black/5 shadow-2xl transition-all duration-500 hover:shadow-[#ff8c3c]/10 hover:-translate-y-1 cursor-pointer relative overflow-hidden group">
+          <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-64 h-64 bg-[#ff8c3c]/5 rounded-full blur-3xl opacity-0 group-hover:opacity-100 transition-opacity duration-700 pointer-events-none"></div>
+          
+          <div className="flex justify-between items-center relative z-10">
+            <h3 className="text-[10px] font-black uppercase tracking-[0.3em] text-[#a8976d] flex items-center gap-2">
+              <Cpu className="w-3.5 h-3.5 text-[#ffb36b]" /> Consensus Overview
+            </h3>
           </div>
           
-          <div className="grid grid-cols-2 gap-4">
-            <div className="p-4 bg-white/5 rounded-2xl border border-white/5">
-              <div className="text-[10px] text-[#a8976d] font-black uppercase tracking-tighter mb-1">AI Confidence</div>
-              <div className="text-2xl font-black text-[#ffb36b]">{(1 - (prediction?.fraud_score || 0)).toFixed(2)}</div>
+          <div className="p-6 rounded-2xl bg-black/40 border border-white/5 italic text-[12px] text-white/70 leading-relaxed shadow-inner backdrop-blur-sm relative z-10 min-h-[90px] flex items-center">
+            "{prediction?.explanation || "Awaiting complete neural vector alignment from node modules."}"
+          </div>
+          
+          <div className="grid grid-cols-2 gap-5 relative z-10">
+            <div className="p-6 bg-[#0a0e14] rounded-2xl border border-white/5 hover:border-white/10 transition-colors group/box">
+              <div className="text-[9px] text-[#a8976d] font-black uppercase tracking-widest mb-3 flex items-center gap-2">
+                <BrainCircuit className="w-3 h-3 text-[#ff8c3c]/50 group-hover/box:text-[#ff8c3c] transition-colors" /> Base Risk
+              </div>
+              <div className="text-3xl font-black text-[#ffb36b] tracking-tighter">{(prediction?.fraud_score || 0).toFixed(2)}</div>
             </div>
-            <div className="p-4 bg-white/5 rounded-2xl border border-white/5">
-              <div className="text-[10px] text-[#a8976d] font-black uppercase tracking-tighter mb-1">Risk Intensity</div>
-              <div className={`text-2xl font-black ${getRiskColor(prediction?.risk_level)}`}>{prediction?.risk_level || 'IDLE'}</div>
+            <div className="p-6 bg-[#0a0e14] rounded-2xl border border-white/5 hover:border-white/10 transition-colors group/box">
+              <div className="text-[9px] text-[#a8976d] font-black uppercase tracking-widest mb-3 flex items-center gap-2">
+                <ShieldAlert className="w-3 h-3 text-white/30 group-hover/box:text-white transition-colors" /> AI Status
+              </div>
+              <div className={`text-xl font-black ${getRiskColor(prediction?.risk_level)} pt-1`}>{prediction?.risk_level || 'IDLE'}</div>
             </div>
           </div>
 
-          <button className="w-full mt-auto py-4 bg-[#ff8c3c]/10 border border-[#ff8c3c]/20 text-[#ff8c3c] text-[11px] font-black uppercase tracking-[0.3em] hover:bg-[#ff8c3c]/20 transition-all duration-300 flex items-center justify-center gap-3 rounded-2xl group shadow-lg shadow-[#ff8c3c]/5">
-            Escalate Forensic Node <ExternalLink className="w-4 h-4 group-hover:translate-x-0.5 group-hover:-translate-y-0.5 transition-transform" />
+          <button className="w-full mt-auto py-5 bg-white text-black text-[10px] font-black uppercase tracking-[0.3em] hover:bg-[#ff8c3c] hover:text-white transition-all duration-300 flex items-center justify-center gap-3 rounded-2xl hover:shadow-[0_0_20px_rgba(255,140,60,0.3)] shadow-lg relative z-10">
+            Escalate Forensic Node <ExternalLink className="w-3.5 h-3.5 group-hover:translate-x-0.5 group-hover:-translate-y-0.5 transition-transform" />
           </button>
         </div>
       </div>
