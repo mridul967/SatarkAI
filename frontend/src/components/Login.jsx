@@ -7,8 +7,8 @@ import logo from '../logo.png';
 
 export default function Login() {
   const { login } = useAuth();
-  const [username, setUsername] = useState('');
-  const [password, setPassword] = useState('');
+  const [username, setUsername] = useState('admin');
+  const [password, setPassword] = useState('test123');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
 
@@ -16,6 +16,12 @@ export default function Login() {
     e.preventDefault();
     setLoading(true);
     setError('');
+
+    if (username !== 'admin' || password !== 'test123') {
+      setError('Invalid security credentials. Try admin / test123');
+      setLoading(false);
+      return;
+    }
 
     // Simulate network latency for realism
     setTimeout(() => {
