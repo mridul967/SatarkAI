@@ -19,6 +19,7 @@ import AnalystConsole from './components/AnalystConsole';
 import Login from './components/Login';
 import Intro from './components/Intro';
 import LatencyBadge from './components/LatencyBadge';
+import LanguageToggle from './components/LanguageToggle';
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000';
 
@@ -28,6 +29,13 @@ function App() {
   const [showIntro, setShowIntro] = useState(true);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const { isConnected, lastTransaction, data } = useWebSocket('ws://localhost:8000/ws/transactions');
+  
+  const [lang, setLang] = useState(() => localStorage.getItem('sartak_lang') || 'en');
+
+  const handleLangToggle = (newLang) => {
+    setLang(newLang);
+    localStorage.setItem('sartak_lang', newLang);
+  };
 
   if (showIntro) return <Intro onComplete={() => setShowIntro(false)} />;
 
@@ -39,13 +47,12 @@ function App() {
     { id: 'models', label: 'Consensus Base', icon: BrainCircuit },
     { id: 'bank-network', label: 'Mesh Network', icon: Globe },
     { id: 'history', label: 'Audit Ledger', icon: Database },
-    { id: 'settings', label: 'Node Settings', icon: Settings },
   ];
 
   const getRiskColor = (level) => {
     if (level === 'CRITICAL' || level === 'HIGH') return 'text-red-500';
     if (level === 'MEDIUM') return 'text-orange-500';
-    return 'text-[#1c1a18]';
+    return 'text-emerald-500';
   };
 
   return (
@@ -145,6 +152,8 @@ function App() {
                 <span className="text-[10px]">K</span>
               </div>
             </div>
+            <LanguageToggle lang={lang} onToggle={handleLangToggle} />
+
             <button className="relative text-black/40 hover:text-black transition-colors">
               <Bell className="w-5 h-5" />
               <span className="absolute -top-1 -right-1 w-2.5 h-2.5 bg-[#ff8c3c] rounded-full border-2 border-white"></span>
@@ -155,113 +164,170 @@ function App() {
         {/* View Layouts */}
         <div className="flex-1 overflow-y-auto p-4 md:p-10 custom-scrollbar relative z-0">
           
-          {/* Workstation View (Main Investigation) */}
+          {/* Workstation View — Premium Redesign */}
           {activeTab === 'dashboard' && (
-            <div className="max-w-[1700px] mx-auto space-y-6 md:space-y-8 animate-slide-up-subtle">
-              <div className="grid grid-cols-1 xl:grid-cols-12 gap-6 md:gap-8">
-                
-                {/* Left: Global Graph (Morphic Black Container) */}
-                <div className="xl:col-span-8 flex flex-col group cursor-crosshair">
-                  <div className="flex items-center justify-between mb-4 px-1 md:px-2">
-                    <h2 className="text-[10px] md:text-[11px] font-black uppercase tracking-[0.4em] text-black/80 flex items-center whitespace-nowrap overflow-hidden text-ellipsis">
-                       <span className="w-1.5 h-1.5 bg-[#ff8c3c] rounded-full mr-2 md:mr-3 animate-pulse shrink-0"></span>
-                       Global Entity Mapper
-                    </h2>
-                    <div className="text-[9px] md:text-[10px] font-mono text-black/40 flex items-center gap-1 md:gap-2 shrink-0">
-                      <Settings className="w-3 h-3 hover:text-black transition-colors cursor-pointer" />
-                      <span className="hidden sm:inline">CONFIG_NODE</span>
+            <div className="max-w-[1700px] mx-auto space-y-6 animate-slide-up-subtle">
+
+              {/* ═══ ROW 0: Live Metrics Ribbon ═══ */}
+              <div className="bg-[#0a0e14] rounded-2xl border border-white/[0.04] shadow-xl p-1">
+                <div className="grid grid-cols-2 md:grid-cols-5 divide-x divide-white/[0.04]">
+                  {[
+                    { label: 'Active Target', value: lastTransaction?.transaction.user_id || '—', accent: 'text-white' },
+                    { label: 'Transaction', value: `₹${lastTransaction?.transaction.amount?.toLocaleString() || '0'}`, accent: 'text-white' },
+                    { label: 'Risk Score', value: `${Math.round((lastTransaction?.prediction?.fraud_score || 0) * 100)}%`, accent: lastTransaction?.prediction?.fraud_score > 0.6 ? 'text-red-400' : lastTransaction?.prediction?.fraud_score > 0.3 ? 'text-orange-400' : 'text-emerald-400' },
+                    { label: 'Classification', value: lastTransaction?.prediction?.risk_level || 'IDLE', accent: getRiskColor(lastTransaction?.prediction?.risk_level) },
+                    { 
+                      label: 'Inference', 
+                      value: lastTransaction?.prediction?.latency_ms ? (
+                        <LatencyBadge ms={lastTransaction.prediction.latency_ms} />
+                      ) : '—', 
+                      accent: '' 
+                    },
+                  ].map((m, i) => (
+                    <div key={i} className="px-5 py-4 flex flex-col items-center justify-center text-center">
+                      <span className="text-[9px] font-bold uppercase tracking-[0.25em] text-[#a8976d]/60 mb-1.5">{m.label}</span>
+                      <span className={`text-sm font-black tracking-tight ${m.accent}`}>{m.value}</span>
                     </div>
-                  </div>
-                  <div className="h-[400px] md:h-[600px] rounded-3xl overflow-hidden bg-[#0a0e14] border border-black/5 shadow-2xl relative transition-all duration-500 hover:shadow-[#ff8c3c]/10 hover:-translate-y-1">
+                  ))}
+                </div>
+              </div>
+
+              {/* ═══ ROW 1: Graph + Intelligence Panel ═══ */}
+              <div className="grid grid-cols-1 xl:grid-cols-12 gap-6">
+
+                {/* ─── LEFT: Entity Graph ─── */}
+                <div className="xl:col-span-8 group">
+                  <div className="relative h-[520px] rounded-2xl overflow-hidden bg-[#0a0e14] border border-white/[0.04] shadow-2xl transition-all duration-500 hover:shadow-[#ff8c3c]/[0.06]">
                     <FraudGraph userId={lastTransaction?.transaction.user_id || 'usr_1001'} API_URL={API_URL} />
-                    {/* Corner accent */}
-                    <div className="absolute top-0 right-0 w-16 h-16 border-t-2 border-r-2 border-[#ff8c3c]/30 rounded-tr-3xl m-4 pointer-events-none transition-opacity opacity-0 group-hover:opacity-100"></div>
+                    {/* Top-left label */}
+                    <div className="absolute top-5 left-6 flex items-center gap-2.5 z-10">
+                      <span className="w-1.5 h-1.5 bg-[#ff8c3c] rounded-full animate-pulse shadow-[0_0_6px_rgba(255,140,60,0.6)]"></span>
+                      <span className="text-[10px] font-black uppercase tracking-[0.3em] text-white/50">Entity Graph</span>
+                    </div>
+                    {/* Corner accents */}
+                    <div className="absolute top-3 right-3 w-10 h-10 border-t border-r border-[#ff8c3c]/20 rounded-tr-xl pointer-events-none opacity-0 group-hover:opacity-100 transition-opacity duration-500"></div>
+                    <div className="absolute bottom-3 left-3 w-10 h-10 border-b border-l border-[#ff8c3c]/20 rounded-bl-xl pointer-events-none opacity-0 group-hover:opacity-100 transition-opacity duration-500"></div>
                   </div>
                 </div>
 
-                {/* Right: Tactical HUD */}
-                <div className="xl:col-span-4 space-y-8 flex flex-col justify-between">
-                  <div className="bg-[#0a0e14] rounded-3xl p-8 flex flex-col items-center border border-black/5 shadow-2xl relative transition-all duration-500 hover:shadow-[#ff8c3c]/10 hover:-translate-y-1 cursor-pointer">
-                    <div className="absolute top-5 left-6 text-[9px] font-mono text-[#a8976d]/50 tracking-widest uppercase">SEC_LEVEL_alpha</div>
-                    <div className="absolute top-5 right-6 w-2 h-2 rounded-full bg-[#ffb36b] shadow-[0_0_10px_rgba(255,179,107,0.5)] animate-pulse"></div>
-                    
-                    <h3 className="text-[10px] font-black uppercase tracking-[0.4em] text-[#a8976d] mt-4 mb-6">Threat Vector Pulse</h3>
+                {/* ─── RIGHT: Intelligence Column ─── */}
+                <div className="xl:col-span-4 space-y-6 flex flex-col">
+
+                  {/* Gauge Card */}
+                  <div className="bg-[#0a0e14] rounded-2xl p-6 border border-white/[0.04] shadow-2xl relative overflow-hidden">
+                    <div className="absolute top-0 left-0 w-full h-[1px] bg-gradient-to-r from-transparent via-[#ff8c3c]/30 to-transparent"></div>
+                    <div className="flex items-center justify-between mb-2">
+                      <span className="text-[9px] font-black uppercase tracking-[0.3em] text-[#a8976d]/60">Threat Vector</span>
+                      <span className="w-2 h-2 rounded-full bg-[#ff8c3c]/60 animate-pulse shadow-[0_0_8px_rgba(255,140,60,0.4)]"></span>
+                    </div>
                     <ScoreGauge 
                       score={lastTransaction?.prediction?.fraud_score || 0}
                       riskLevel={lastTransaction?.prediction?.risk_level || 'SAFE'}
                     />
                   </div>
 
-                  <div className="bg-[#12161f] rounded-3xl p-8 flex flex-col justify-center relative overflow-hidden group hover:bg-[#1a202c] transition-all duration-500 border border-black/5 shadow-2xl cursor-pointer hover:-translate-y-1">
-                    <div className="absolute -top-10 -right-10 p-4 opacity-5 group-hover:opacity-20 group-hover:scale-110 transition-all duration-500">
-                      <BrainCircuit className="w-48 h-48 text-[#ff8c3c]" />
-                    </div>
-                    <div className="flex justify-between items-center mb-4 relative z-10">
-                      <div className="text-[10px] font-black uppercase tracking-[0.3em] text-[#a8976d]">Target UID</div>
-                      <div className="w-6 h-6 rounded-full bg-white/5 flex items-center justify-center text-white/50 group-hover:text-white transition-colors border border-white/5 group-hover:border-white/20">
-                        <Activity className="w-3 h-3" />
+                  {/* Target Identity Card */}
+                  <div className="bg-[#0a0e14] rounded-2xl border border-white/[0.04] shadow-2xl relative overflow-hidden group/card hover:border-[#ff8c3c]/10 transition-all cursor-pointer flex-1">
+                    <div className="absolute top-0 left-0 w-full h-[1px] bg-gradient-to-r from-transparent via-white/5 to-transparent"></div>
+                    <div className="p-6">
+                      <div className="flex items-center justify-between mb-5">
+                        <span className="text-[9px] font-black uppercase tracking-[0.3em] text-[#a8976d]/60">Target Identity</span>
+                        <Activity className="w-3.5 h-3.5 text-white/20 group-hover/card:text-[#ff8c3c] transition-colors" />
+                      </div>
+                      <div className="text-2xl font-black text-white tracking-tighter mb-6 group-hover/card:text-[#ff8c3c] transition-colors select-all">
+                        {lastTransaction?.transaction.user_id || 'SYNCHRONIZING'}
+                      </div>
+                      <div className="grid grid-cols-3 gap-2">
+                        <div className="bg-white/[0.03] rounded-xl p-3 border border-white/[0.04]">
+                          <span className="text-[8px] font-bold text-[#a8976d]/50 uppercase tracking-widest block mb-1">Value</span>
+                          <span className="text-xs font-black text-white">₹{lastTransaction?.transaction.amount?.toLocaleString() || '0'}</span>
+                        </div>
+                        <div className="bg-white/[0.03] rounded-xl p-3 border border-white/[0.04]">
+                          <span className="text-[8px] font-bold text-[#a8976d]/50 uppercase tracking-widest block mb-1">State</span>
+                          <span className={`text-xs font-black ${getRiskColor(lastTransaction?.prediction?.risk_level)}`}>{lastTransaction?.prediction?.risk_level || 'IDLE'}</span>
+                        </div>
+                        <div className="bg-white/[0.03] rounded-xl p-3 border border-white/[0.04]">
+                          <span className="text-[8px] font-bold text-[#a8976d]/50 uppercase tracking-widest block mb-1">Device</span>
+                          <span className="text-xs font-black text-white/70 truncate block">{lastTransaction?.transaction.device_id?.substring(0, 7) || '—'}</span>
+                        </div>
                       </div>
                     </div>
-                    <div className="text-3xl font-black text-white tracking-tighter mb-5 select-all break-all transition-colors group-hover:text-[#ff8c3c] relative z-10">{lastTransaction?.transaction.user_id || 'ID_SYNCHRONIZING'}</div>
-                    <div className="grid grid-cols-2 gap-3 relative z-10">
-                      <div className="p-3.5 rounded-2xl bg-[#0a0e14] border border-white/5 flex flex-col hover:border-white/10 transition-colors">
-                        <span className="text-[9px] font-bold text-[#a8976d] uppercase mb-1.5 tracking-widest">Txn Value</span>
-                        <span className="text-sm font-black text-white leading-none">₹{lastTransaction?.transaction.amount?.toLocaleString() || '0'}</span>
-                      </div>
-                      <div className="p-3.5 rounded-2xl bg-[#0a0e14] border border-white/5 flex flex-col hover:border-white/10 transition-colors">
-                        <span className="text-[9px] font-bold text-[#a8976d] uppercase mb-1.5 tracking-widest">Curr State</span>
-                        <span className={`text-sm font-black ${getRiskColor(lastTransaction?.prediction.risk_level)} leading-none`}>{lastTransaction?.prediction.risk_level || 'IDLE'}</span>
-                      </div>
-                    </div>
+                    {/* Subtle Background Icon */}
+                    <BrainCircuit className="absolute -bottom-6 -right-6 w-32 h-32 text-[#ff8c3c]/[0.03] group-hover/card:text-[#ff8c3c]/[0.08] transition-colors pointer-events-none" />
                   </div>
                 </div>
               </div>
 
-              {/* Lower Section: Forensic Console & Stream */}
-              <div className="grid grid-cols-1 xl:grid-cols-12 gap-6 md:gap-8 pb-10">
-                <div className="xl:col-span-12">
-                   <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 md:gap-8">
-                      <div className="min-h-[400px] xl:h-[500px]">
-                        <AnalystConsole transaction={lastTransaction?.transaction} prediction={lastTransaction?.prediction} />
-                      </div>
-                      
-                      <div className="h-[400px] xl:h-[500px] bg-[#0a0e14] rounded-3xl flex flex-col overflow-hidden border border-black/5 shadow-2xl transition-all duration-500 hover:shadow-[#ff8c3c]/10 group hover:-translate-y-1">
-                        <div className="p-6 border-b border-white/5 bg-[#12161f] flex justify-between items-center transition-colors">
-                          <div className="flex items-center gap-3">
-                            <Database className="w-4 h-4 text-[#ff8c3c]" />
-                            <span className="text-[10px] font-black uppercase tracking-[0.4em] text-[#a8976d]">Neural Forensic Stream</span>
-                          </div>
-                          <div className="flex items-center gap-3">
-                            <span className="text-[9px] text-[#a8976d] uppercase tracking-widest hidden sm:block">Live Connect</span>
-                            <span className="text-[9px] font-mono p-1.5 bg-[#ff8c3c]/10 text-[#ff8c3c] border border-[#ff8c3c]/20 rounded-md px-2 font-bold">{data.length} BUFF</span>
-                          </div>
+              {/* ═══ ROW 2: Forensic Analysis + Live Feed ═══ */}
+              <div className="grid grid-cols-1 xl:grid-cols-12 gap-6 pb-8">
+
+                {/* ─── LEFT: Forensic Console ─── */}
+                <div className="xl:col-span-5">
+                  <AnalystConsole 
+                    transaction={lastTransaction?.transaction} 
+                    prediction={lastTransaction?.prediction} 
+                    onEscalate={() => setActiveTab('graph')}
+                    lang={lang}
+                  />
+                </div>
+
+                {/* ─── RIGHT: Live Transaction Stream ─── */}
+                <div className="xl:col-span-7">
+                  <div className="bg-[#0a0e14] rounded-2xl border border-white/[0.04] shadow-2xl overflow-hidden">
+                    {/* Stream Header */}
+                    <div className="px-6 py-4 border-b border-white/[0.04] flex items-center justify-between bg-white/[0.01]">
+                      <div className="flex items-center gap-3">
+                        <div className="w-8 h-8 rounded-lg bg-[#ff8c3c]/10 flex items-center justify-center">
+                          <Database className="w-4 h-4 text-[#ff8c3c]" />
                         </div>
-                        <div className="flex-1 overflow-y-auto custom-scrollbar font-mono text-[10px] p-6 space-y-3 relative">
-                          {!data.length ? (
-                             <div className="absolute inset-0 flex items-center justify-center text-[#a8976d]/40 italic">Awaiting connection...</div>
-                          ) : (
-                            data.map((item, idx) => (
+                        <div>
+                          <span className="text-[10px] font-black uppercase tracking-[0.25em] text-white/60 block">Live Feed</span>
+                          <span className="text-[8px] font-mono text-[#a8976d]/40 uppercase tracking-widest">{data.length} transactions buffered</span>
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse shadow-[0_0_6px_rgba(16,185,129,0.5)]"></span>
+                        <span className="text-[9px] font-bold text-emerald-500/70 uppercase tracking-widest">LIVE</span>
+                      </div>
+                    </div>
+
+                    {/* Stream Body */}
+                    <div className="overflow-y-auto max-h-[480px] custom-scrollbar">
+                      {!data.length ? (
+                        <div className="py-20 flex items-center justify-center text-[#a8976d]/30 italic text-xs">Awaiting ingestion...</div>
+                      ) : (
+                        <div className="divide-y divide-white/[0.03]">
+                          {data.map((item, idx) => {
+                            const risk = item.prediction?.risk_level;
+                            const isCritical = risk === 'CRITICAL' || risk === 'HIGH';
+                            return (
                               <div 
                                 key={idx} 
-                                className="flex items-center justify-between p-4 rounded-2xl bg-white/[0.02] hover:bg-[#ff8c3c]/5 cursor-pointer transition-all duration-300 border border-white/5 hover:border-[#ff8c3c]/30 hover:scale-[1.01]"
+                                className={`flex items-center justify-between px-6 py-3.5 hover:bg-white/[0.02] cursor-pointer transition-all duration-200 group/row ${isCritical ? 'bg-red-500/[0.03]' : ''}`}
                               >
-                                <div className="flex items-center gap-4">
-                                  <span className="text-[#a8976d]/50 w-16 block">{new Date(item.transaction.timestamp).toLocaleTimeString([], { hour12: false })}</span>
-                                  <span className="w-1 h-1 rounded-full bg-white/10 hidden sm:block"></span>
-                                  <span className="text-white font-bold tracking-wide opacity-80 hover:text-[#ffb36b] transition-colors">{item.transaction.user_id}</span>
+                                <div className="flex items-center gap-4 flex-1 min-w-0">
+                                  <span className="text-[10px] font-mono text-white/20 w-14 shrink-0">{new Date(item.transaction.timestamp).toLocaleTimeString([], { hour12: false })}</span>
+                                  <div className={`w-1.5 h-1.5 rounded-full shrink-0 ${isCritical ? 'bg-red-500 shadow-[0_0_6px_rgba(239,68,68,0.5)]' : risk === 'MEDIUM' ? 'bg-orange-400' : 'bg-emerald-500/50'}`}></div>
+                                  <div className="flex flex-col min-w-0">
+                                    <span className="text-[11px] font-bold text-white/70 group-hover/row:text-white transition-colors truncate">{item.transaction.user_id}</span>
+                                    <span className="text-[9px] text-[#a8976d]/40 truncate group-hover/row:text-[#a8976d]/60 transition-colors">
+                                      {lang === 'hi' ? item.prediction?.alert_hi : item.prediction?.alert_en}
+                                    </span>
+                                  </div>
                                 </div>
-                                
-                                <div className="flex items-center gap-5">
-                                  <span className="text-[#a8976d]/70 font-medium tracking-wide">₹{item.transaction.amount?.toLocaleString()}</span>
+
+                                <div className="flex items-center gap-5 shrink-0">
+                                  <span className="text-[11px] font-mono text-white/30 hidden sm:block">₹{item.transaction.amount?.toLocaleString()}</span>
                                   <LatencyBadge ms={item.prediction?.latency_ms} />
-                                  <span className={`font-black tracking-widest w-20 text-right ${getRiskColor(item.prediction?.risk_level)}`}>{item.prediction?.risk_level}</span>
+                                  <span className={`text-[10px] font-black uppercase tracking-widest w-16 text-right ${getRiskColor(risk)}`}>{risk}</span>
                                 </div>
                               </div>
-                            ))
-                          )}
+                            );
+                          })}
                         </div>
-                      </div>
-                   </div>
+                      )}
+                    </div>
+                  </div>
                 </div>
               </div>
             </div>

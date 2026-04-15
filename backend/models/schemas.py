@@ -22,5 +22,7 @@ class FraudPrediction(BaseModel):
     model_used: str
     processing_time_ms: float
     latency_ms: float
+    alert_en: Optional[str] = None
+    alert_hi: Optional[str] = None
 
     model_config = {"protected_namespaces": ()}

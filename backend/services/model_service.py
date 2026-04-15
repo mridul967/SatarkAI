@@ -2,6 +2,7 @@ import os
 import time
 import numpy as np
 import onnxruntime as ort
+import statistics
 from collections import deque
 from typing import Dict, Any
 
@@ -33,13 +34,13 @@ class ModelService:
     def get_latency_stats(self) -> dict:
         if len(self._latency_window) < 2:
             return {"p50": 0.0, "p95": 0.0, "p99": 0.0, "count": len(self._latency_window)}
-        w = sorted(self._latency_window)
-        n = len(w)
+        
+        w = list(self._latency_window)
         return {
-            "p50": round(w[int(n * 0.50)], 1),
-            "p95": round(w[int(n * 0.95)], 1),
-            "p99": round(w[min(int(n * 0.99), n - 1)], 1),
-            "count": n,
+            "p50": round(statistics.median(w), 1),
+            "p95": round(np.percentile(w, 95), 1),
+            "p99": round(np.percentile(w, 99), 1),
+            "count": len(w),
         }
 
     async def run_inference(self, features: Dict[str, Any], transaction: Any) -> Dict[str, Any]:

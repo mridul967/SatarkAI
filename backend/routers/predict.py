@@ -8,6 +8,8 @@ from services.database_service import db_service
 from services.cache_service import cache_service
 from services.blockchain_service import blockchain_service
 from services.model_service import model_service
+from services import compliance_service
+from services.i18n_service import get_alert
 
 import asyncio
 import random
@@ -58,8 +60,10 @@ async def predict(txn: Transaction, background_tasks: BackgroundTasks):
         explanation=result["explanation"],
         graph_signals=graph_signals,
         model_used="SatarkGAT-v1.2",
-        processing_time_ms=latency_ms, # Using latency_ms as the primary processing time for this phase
-        latency_ms=latency_ms
+        processing_time_ms=latency_ms,
+        latency_ms=latency_ms,
+        alert_en=get_alert(risk_level, "en", score=int(final_score*100), txn_id=txn.transaction_id),
+        alert_hi=get_alert(risk_level, "hi", score=int(final_score*100), txn_id=txn.transaction_id)
     )
     
     # ── TIERED STORAGE CENSUS (DPDP ACT COMPLIANCE) ──
@@ -85,6 +89,36 @@ async def predict(txn: Transaction, background_tasks: BackgroundTasks):
 
 @router.post("/compare")
 async def compare_predict(txn: Transaction):
+    # 1. Check if we already have comparison results in DB
+    existing = db_service.get_comparisons_for_txn(txn.transaction_id)
+    if existing:
+        # Reconstruct into expected format
+        predictions = []
+        for r in existing:
+            predictions.append({
+                "model_used": r["provider"],
+                "fraud_score": r["fraud_score"],
+                "risk_level": r["risk_level"],
+                "explanation": r["explanation"],
+                "processing_time_ms": r["processing_time_ms"],
+                "offline": False
+            })
+        
+        # Calculate consensus based on existing
+        avg_score = sum(p["fraud_score"] for p in predictions) / len(predictions)
+        consensus_risk = "SAFE"
+        if avg_score > 0.8: consensus_risk = "CRITICAL"
+        elif avg_score > 0.6: consensus_risk = "HIGH"
+        elif avg_score > 0.3: consensus_risk = "MEDIUM"
+        
+        return {
+            "consensus_score": avg_score,
+            "consensus_risk": consensus_risk,
+            "predictions": predictions,
+            "cached": True
+        }
+
+    # 2. If not found, run full inference
     graph_service.add_transaction(txn)
     graph_signals = graph_service.get_graph_signals(txn)
     features = extract_features(txn)
@@ -196,7 +230,9 @@ async def websocket_endpoint(websocket: WebSocket):
                 "fraud_score": score,
                 "risk_level": risk,
                 "reason": reason,
-                "latency_ms": simulated_latency
+                "latency_ms": simulated_latency,
+                "alert_en": get_alert(risk, "en", score=int(score*100), txn_id=txn_dict["transaction_id"]),
+                "alert_hi": get_alert(risk, "hi", score=int(score*100), txn_id=txn_dict["transaction_id"])
             }
 
             # Save to DB
@@ -207,6 +243,59 @@ async def websocket_endpoint(websocket: WebSocket):
                 "prediction": prediction
             }
             await websocket.send_text(json.dumps(payload))
+
+            # ── PHASE B: Auto-trigger 4-LLM Consensus & FMR-1 for CRITICAL transactions ──
+            if score > 0.8:
+                try:
+                    # 1. Trigger full 4-LLM consensus analysis
+                    features = extract_features(txn_obj)
+                    graph_signals = graph_service.get_graph_signals(txn_obj)
+                    
+                    # Run comparison (this saves to DB internally in llm_service or we do it here)
+                    consensus_res = await llm_service.compare(txn_obj, features, graph_signals)
+                    
+                    # 2. Extract the neural narrative (from first available model or consensus)
+                    neural_narrative = ""
+                    for p in consensus_res["predictions"]:
+                        if not p.get("offline") and p.get("explanation"):
+                            neural_narrative = p["explanation"]
+                            break
+                    
+                    if not neural_narrative:
+                        neural_narrative = reason # Fallback to simulator reason
+                    
+                    # 3. Generate the FMR-1 PDF using the neural narrative
+                    pdf = await compliance_service.generate_fmr1_draft(
+                        transaction=txn_dict,
+                        fraud_score=score,
+                        graph_data={
+                            "associated_accounts": [],
+                            "device_ids": [device_id],
+                            "hop_count": random.randint(1, 3),
+                            "merchant_risk": txn_dict["merchant_category"],
+                            "ip_risk_score": round(random.uniform(0.6, 0.95), 2),
+                            "velocity": random.randint(3, 12),
+                            "amount_zscore": round(random.uniform(2.1, 4.5), 2),
+                        },
+                        llm_explanation=neural_narrative,
+                        institution_type="NBFC",
+                    )
+                    
+                    compliance_service.queue_fmr1(
+                        transaction_id=txn_dict["transaction_id"],
+                        pdf_bytes=pdf,
+                        transaction=txn_dict,
+                        fraud_score=score,
+                        llm_explanation=neural_narrative,
+                        institution_type="NBFC",
+                    )
+                    
+                    # 4. Save comparison results to DB so frontend can fetch them
+                    db_service.save_comparison(txn_dict["transaction_id"], consensus_res["predictions"])
+                    
+                except Exception as e:
+                    print(f"Consensus/FMR-1 generation error: {e}")
+
             await asyncio.sleep(3)
     except (WebSocketDisconnect, Exception) as e:
         print(f"WS Error: {e}")

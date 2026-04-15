@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Database, RefreshCw } from 'lucide-react';
+import LatencyBadge from './LatencyBadge';
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000';
 
@@ -121,6 +122,7 @@ export default function TransactionHistory() {
                 <th className="px-6 py-4">Amount</th>
                 <th className="px-6 py-4">Location</th>
                 <th className="px-6 py-4">Anomaly Score</th>
+                <th className="px-6 py-4 text-center">Latency</th>
                 <th className="px-6 py-4">Risk Engine</th>
                 <th className="px-6 py-4">Model</th>
                 <th className="px-6 py-4">Timestamp</th>
@@ -140,6 +142,9 @@ export default function TransactionHistory() {
                        </div>
                        <span className="font-mono text-xs text-gray-400">{(txn.fraud_score * 100).toFixed(1)}%</span>
                     </div>
+                  </td>
+                  <td className="px-6 py-4 text-center">
+                    <LatencyBadge ms={txn.latency_ms || txn.processing_time_ms} />
                   </td>
                   <td className="px-6 py-4">
                     <span className={`inline-flex px-2.5 py-1 rounded-lg text-[10px] font-bold uppercase border ${getRiskBadge(txn.risk_level)}`}>

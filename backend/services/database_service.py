@@ -1,9 +1,11 @@
 import sqlite3
 import json
+import os
 from datetime import datetime
 from typing import List, Optional
 
 DB_PATH = "/app/data/satarkai.db"
+COMPLIANCE_PDF_DIR = "/app/data/compliance_reports"
 
 class DatabaseService:
     def __init__(self):
@@ -59,8 +61,26 @@ class DatabaseService:
                 last_update TEXT DEFAULT CURRENT_TIMESTAMP
             )
         """)
+        cursor.execute("""
+            CREATE TABLE IF NOT EXISTS compliance_reports (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                transaction_id TEXT UNIQUE,
+                user_id TEXT,
+                amount REAL,
+                fraud_score REAL,
+                risk_level TEXT,
+                status TEXT DEFAULT 'PENDING_REVIEW',
+                institution_type TEXT DEFAULT 'NBFC',
+                llm_explanation TEXT,
+                pdf_path TEXT,
+                created_at TEXT DEFAULT CURRENT_TIMESTAMP
+            )
+        """)
         conn.commit()
         conn.close()
+        
+        # Ensure PDF storage directory exists
+        os.makedirs(COMPLIANCE_PDF_DIR, exist_ok=True)
 
     def save_transaction(self, txn_data: dict, prediction: dict):
         conn = self._get_conn()
@@ -184,6 +204,67 @@ class DatabaseService:
             "flagged_transactions": flagged,
             "average_fraud_score": round(avg_score, 4),
             "flag_rate": round(flagged / max(total, 1) * 100, 2)
+        }
+
+    # ── Compliance Report Methods ──────────────────────────
+    def save_compliance_report(self, transaction_id: str, user_id: str, amount: float,
+                                fraud_score: float, risk_level: str, institution_type: str,
+                                llm_explanation: str, pdf_bytes: bytes) -> str:
+        """Save a compliance report: metadata to DB, PDF to disk. Returns the pdf path."""
+        pdf_filename = f"FMR1_DRAFT_{transaction_id}_{datetime.now().strftime('%Y%m%d_%H%M%S')}.pdf"
+        pdf_path = os.path.join(COMPLIANCE_PDF_DIR, pdf_filename)
+        
+        # Write PDF to disk
+        with open(pdf_path, 'wb') as f:
+            f.write(pdf_bytes)
+        
+        conn = self._get_conn()
+        try:
+            conn.execute("""
+                INSERT OR REPLACE INTO compliance_reports
+                (transaction_id, user_id, amount, fraud_score, risk_level, status,
+                 institution_type, llm_explanation, pdf_path)
+                VALUES (?, ?, ?, ?, ?, 'PENDING_REVIEW', ?, ?, ?)
+            """, (
+                transaction_id, user_id, amount, fraud_score, risk_level,
+                institution_type, llm_explanation, pdf_path
+            ))
+            conn.commit()
+        except Exception as e:
+            print(f"DB compliance save error: {e}")
+        finally:
+            conn.close()
+        return pdf_path
+
+    def get_compliance_reports(self, limit: int = 100) -> list:
+        """Return all compliance reports (newest first)."""
+        conn = self._get_conn()
+        rows = conn.execute(
+            "SELECT * FROM compliance_reports ORDER BY created_at DESC LIMIT ?",
+            (limit,)
+        ).fetchall()
+        conn.close()
+        return [dict(r) for r in rows]
+
+    def get_compliance_report(self, transaction_id: str) -> Optional[dict]:
+        """Get a single compliance report by transaction_id."""
+        conn = self._get_conn()
+        row = conn.execute(
+            "SELECT * FROM compliance_reports WHERE transaction_id = ?",
+            (transaction_id,)
+        ).fetchone()
+        conn.close()
+        return dict(row) if row else None
+
+    def get_compliance_stats(self) -> dict:
+        """Get compliance statistics."""
+        conn = self._get_conn()
+        total = conn.execute("SELECT COUNT(*) as c FROM compliance_reports").fetchone()["c"]
+        pending = conn.execute("SELECT COUNT(*) as c FROM compliance_reports WHERE status = 'PENDING_REVIEW'").fetchone()["c"]
+        conn.close()
+        return {
+            "total_reports": total,
+            "pending_review": pending,
         }
 
 db_service = DatabaseService()

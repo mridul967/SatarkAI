@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Loader2, Zap, Brain, ChevronRight, Lock, CheckCircle2 } from 'lucide-react';
+import ComplianceQueue from './ComplianceQueue';
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000';
 
@@ -18,8 +19,12 @@ export default function ModelCompare({ lastTransaction }) {
 
   // Auto-compare when new transaction arrives
   useEffect(() => {
-    if (autoCompare && lastTransaction) {
-      runComparison();
+    if (lastTransaction) {
+      const isCritical = lastTransaction.prediction?.risk_level === 'CRITICAL';
+      // Automatically trigger if auto-compare is ON OR if the transaction is CRITICAL
+      if (autoCompare || isCritical) {
+        runComparison();
+      }
     }
   }, [lastTransaction?.transaction?.transaction_id]);
 
@@ -125,8 +130,15 @@ export default function ModelCompare({ lastTransaction }) {
                   <div className="text-3xl font-black italic">{(results.consensus_score * 100).toFixed(1)}%</div>
                 </div>
               </div>
-              <div className={`px-6 py-2 rounded-xl text-xs font-black uppercase tracking-widest border-2 shadow-lg ${getRiskColor(results.consensus_risk)}`}>
-                {results.consensus_risk}
+              <div className="flex flex-col items-end gap-2">
+                <div className={`px-6 py-2 rounded-xl text-xs font-black uppercase tracking-widest border-2 shadow-lg ${getRiskColor(results.consensus_risk)}`}>
+                  {results.consensus_risk}
+                </div>
+                {results.cached && (
+                  <div className="text-[9px] font-black text-emerald-500 uppercase tracking-widest animate-pulse">
+                    ✓ System Auto-Triggered
+                  </div>
+                )}
               </div>
             </div>
           </div>
@@ -202,6 +214,8 @@ export default function ModelCompare({ lastTransaction }) {
           </div>
         </div>
       )}
+      {/* ── Phase B: RBI Compliance Queue (below LLM UI) ── */}
+      <ComplianceQueue />
     </div>
   );
 }

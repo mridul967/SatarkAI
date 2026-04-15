@@ -7,7 +7,7 @@ export default function ScoreGauge({ score, riskLevel }) {
     if (s > 0.8) return '#f87171'; // Red-400
     if (s > 0.6) return '#fb923c'; // Orange-400
     if (s > 0.3) return '#ffb36b'; // Soft Orange
-    return '#e6d3a3'; // Beige/Gold
+    return '#10b981'; // Emerald-500
   };
 
   const color = getColor(score);
@@ -70,7 +70,7 @@ export default function ScoreGauge({ score, riskLevel }) {
           score > 0.8 ? 'bg-red-500/10 text-red-400 border-red-400/20'
             : score > 0.6 ? 'bg-orange-500/10 text-orange-400 border-orange-400/20'
             : score > 0.3 ? 'bg-orange-300/10 text-[#ffb36b] border-[#ffb36b]/20'
-            : 'bg-[#ff8c3c]/5 text-[#e6d3a3] border-[#e6d3a3]/20'
+            : 'bg-emerald-500/10 text-emerald-400 border-emerald-400/20'
         }`}>
           {riskLevel || 'IDLE'}
         </div>
