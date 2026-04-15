@@ -105,7 +105,7 @@ class DatabaseService:
                 prediction.get("risk_level"),
                 prediction.get("reason", prediction.get("explanation", "")),
                 prediction.get("model_used", "ensemble"),
-                prediction.get("processing_time_ms", 0),
+                prediction.get("processing_time_ms", prediction.get("latency_ms", 0)),
                 json.dumps(prediction.get("graph_signals", []))
             ))
             conn.commit()
@@ -266,5 +266,19 @@ class DatabaseService:
             "total_reports": total,
             "pending_review": pending,
         }
+
+    def update_compliance_status(self, transaction_id: str, status: str):
+        """Update the status of a compliance report."""
+        conn = self._get_conn()
+        try:
+            conn.execute(
+                "UPDATE compliance_reports SET status = ? WHERE transaction_id = ?",
+                (status, transaction_id)
+            )
+            conn.commit()
+        except Exception as e:
+            print(f"DB compliance status update error: {e}")
+        finally:
+            conn.close()
 
 db_service = DatabaseService()

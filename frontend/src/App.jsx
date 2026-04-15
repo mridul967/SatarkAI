@@ -50,8 +50,9 @@ function App() {
   ];
 
   const getRiskColor = (level) => {
-    if (level === 'CRITICAL' || level === 'HIGH') return 'text-red-500';
-    if (level === 'MEDIUM') return 'text-orange-500';
+    if (level === 'CRITICAL') return 'text-red-500';
+    if (level === 'HIGH') return 'text-orange-500';
+    if (level === 'MEDIUM') return 'text-yellow-500';
     return 'text-emerald-500';
   };
 
@@ -199,11 +200,6 @@ function App() {
                 <div className="xl:col-span-8 group">
                   <div className="relative h-[520px] rounded-2xl overflow-hidden bg-[#0a0e14] border border-white/[0.04] shadow-2xl transition-all duration-500 hover:shadow-[#ff8c3c]/[0.06]">
                     <FraudGraph userId={lastTransaction?.transaction.user_id || 'usr_1001'} API_URL={API_URL} />
-                    {/* Top-left label */}
-                    <div className="absolute top-5 left-6 flex items-center gap-2.5 z-10">
-                      <span className="w-1.5 h-1.5 bg-[#ff8c3c] rounded-full animate-pulse shadow-[0_0_6px_rgba(255,140,60,0.6)]"></span>
-                      <span className="text-[10px] font-black uppercase tracking-[0.3em] text-white/50">Entity Graph</span>
-                    </div>
                     {/* Corner accents */}
                     <div className="absolute top-3 right-3 w-10 h-10 border-t border-r border-[#ff8c3c]/20 rounded-tr-xl pointer-events-none opacity-0 group-hover:opacity-100 transition-opacity duration-500"></div>
                     <div className="absolute bottom-3 left-3 w-10 h-10 border-b border-l border-[#ff8c3c]/20 rounded-bl-xl pointer-events-none opacity-0 group-hover:opacity-100 transition-opacity duration-500"></div>

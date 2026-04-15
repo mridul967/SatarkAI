@@ -1,14 +1,14 @@
 import { useState, useEffect } from 'react';
-import { Loader2, Zap, Brain, ChevronRight, Lock, CheckCircle2 } from 'lucide-react';
+import { Loader2, Zap, Brain, ChevronRight, Lock, CheckCircle2, Shield, Activity, Cpu, Network } from 'lucide-react';
 import ComplianceQueue from './ComplianceQueue';
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000';
 
 const MODEL_META = {
-  claude: { name: 'Claude Sonnet', color: '#d97706', icon: '🟠', available: false },
-  gemini: { name: 'Gemini 2.0 Flash', color: '#10b981', icon: '🟢', available: true },
-  gpt4o: { name: 'GPT-4o Mini', color: '#6366f1', icon: '🔵', available: false },
-  groq: { name: 'Groq Llama 3.3 70B', color: '#8b5cf6', icon: '🟣', available: true },
+  claude: { name: 'Claude Sonnet', color: '#d97706', gradient: 'from-amber-500/20 to-amber-600/5', ring: 'ring-amber-500/30', icon: '🟠', available: false },
+  gemini: { name: 'Gemini 2.0 Flash', color: '#10b981', gradient: 'from-emerald-500/20 to-emerald-600/5', ring: 'ring-emerald-500/30', icon: '🟢', available: true },
+  gpt4o: { name: 'GPT-4o Mini', color: '#6366f1', gradient: 'from-indigo-500/20 to-indigo-600/5', ring: 'ring-indigo-500/30', icon: '🔵', available: false },
+  groq: { name: 'Groq Llama 3.3 70B', color: '#8b5cf6', gradient: 'from-violet-500/20 to-violet-600/5', ring: 'ring-violet-500/30', icon: '🟣', available: true },
 };
 
 export default function ModelCompare({ lastTransaction }) {
@@ -16,6 +16,15 @@ export default function ModelCompare({ lastTransaction }) {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
   const [autoCompare, setAutoCompare] = useState(false);
+  const [providerStatus, setProviderStatus] = useState(null);
+
+  // Fetch API Key status on mount
+  useEffect(() => {
+    fetch(`${API_URL}/api/predict/providers`)
+      .then(res => res.json())
+      .then(data => setProviderStatus(data))
+      .catch(err => console.error("Provider check failed:", err));
+  }, []);
 
   // Auto-compare when new transaction arrives
   useEffect(() => {
@@ -58,64 +67,113 @@ export default function ModelCompare({ lastTransaction }) {
   };
 
   return (
-    <div className="max-w-5xl mx-auto space-y-5 animate-slide-up">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-3xl font-bold text-white tracking-tight mb-1">4-LLM Consensus Engine</h1>
-          <p className="text-gray-500 text-sm">Compare fraud assessments across multiple AI providers in parallel.</p>
-        </div>
-        <div className="flex items-center space-x-3">
-          <label className="flex items-center space-x-2 text-xs text-gray-400 cursor-pointer">
-            <input type="checkbox" checked={autoCompare} onChange={e => setAutoCompare(e.target.checked)}
-              className="rounded border-[#1e2738] bg-[#111620] text-emerald-500 focus:ring-emerald-500/30" />
-            <span>Auto-compare</span>
-          </label>
-          <button onClick={runComparison} disabled={loading || !lastTransaction}
-            className="flex items-center space-x-2 px-5 py-2 bg-emerald-600 hover:bg-emerald-500 disabled:bg-[#1e2738] disabled:text-gray-600 text-white rounded-lg font-medium text-sm transition-all shadow-lg shadow-emerald-500/15 disabled:shadow-none">
-            {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Zap className="w-4 h-4" />}
-            <span>{loading ? 'Analyzing...' : 'Run Comparison'}</span>
-          </button>
+    <div className="max-w-5xl mx-auto space-y-6 animate-slide-up">
+      {/* ── Hero Header ── */}
+      <div className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-[#0a0e14] via-[#111620] to-[#0d1a2a] border border-white/5 p-8 shadow-2xl">
+        {/* Background grid pattern */}
+        <div className="absolute inset-0 opacity-[0.03]" style={{
+          backgroundImage: 'radial-gradient(circle at 1px 1px, white 1px, transparent 0)',
+          backgroundSize: '24px 24px'
+        }} />
+        {/* Glow effects */}
+        <div className="absolute top-0 right-0 w-72 h-72 bg-emerald-500/10 rounded-full blur-[100px]" />
+        <div className="absolute bottom-0 left-0 w-48 h-48 bg-indigo-500/10 rounded-full blur-[80px]" />
+        
+        <div className="relative flex items-start justify-between">
+          <div className="flex items-center gap-5">
+            <div className="p-4 bg-gradient-to-br from-emerald-500/20 to-emerald-600/5 rounded-2xl border border-emerald-500/20 shadow-lg shadow-emerald-500/10 flex items-center justify-center">
+              <Brain className="w-8 h-8 text-emerald-400" />
+            </div>
+            <div>
+              <div className="flex items-center gap-3 mb-1">
+                <h1 className="text-2xl font-black text-white tracking-tight">4-LLM Consensus Engine</h1>
+                <span className="px-2 py-0.5 bg-emerald-500/10 border border-emerald-500/20 rounded-md text-[9px] font-black text-emerald-400 uppercase tracking-widest">v2.4</span>
+              </div>
+              <p className="text-gray-500 text-sm font-medium">Parallel multi-vector forensic analysis across enterprise AI providers</p>
+            </div>
+          </div>
+          <div className="flex items-center gap-3">
+            <label className="flex items-center gap-2 text-xs text-gray-500 cursor-pointer hover:text-gray-300 transition-colors bg-white/[0.03] px-3 py-2 rounded-xl border border-white/5">
+              <input type="checkbox" checked={autoCompare} onChange={e => setAutoCompare(e.target.checked)}
+                className="rounded border-[#1e2738] bg-[#111620] text-emerald-500 focus:ring-emerald-500/30 w-3 h-3" />
+              <span className="font-bold uppercase tracking-wider text-[10px]">Auto</span>
+            </label>
+            <button onClick={runComparison} disabled={loading || !lastTransaction}
+              className="flex items-center gap-2 px-6 py-2.5 bg-gradient-to-r from-emerald-600 to-emerald-500 hover:from-emerald-500 hover:to-emerald-400 disabled:from-[#1e2738] disabled:to-[#1e2738] disabled:text-gray-600 text-white rounded-xl font-black text-[11px] uppercase tracking-wider transition-all shadow-lg shadow-emerald-500/20 disabled:shadow-none">
+              {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Zap className="w-4 h-4" />}
+              <span>{loading ? 'Analyzing...' : 'Run Comparison'}</span>
+            </button>
+          </div>
         </div>
       </div>
 
-      {/* Model Availability */}
+      {/* ── Model Provider Cards ── */}
       <div className="grid grid-cols-4 gap-3">
         {Object.entries(MODEL_META).map(([key, meta]) => {
-          // Check if this model returned a result in the last run (to check actual availability)
-          const lastResult = results?.predictions?.find(p => p.model_used === key);
-          const isOffline = lastResult?.offline === true;
+          const isOffline = providerStatus ? !providerStatus[key] : !meta.available;
           
           return (
-            <div key={key} className={`flex items-center space-x-2.5 p-3 rounded-lg border transition-all ${isOffline ? 'bg-[#0d1219] border-red-500/20 opacity-50' : 'bg-[#111620] border-emerald-500/20 shadow-lg shadow-emerald-500/5'}`}>
-              <span className="text-base">{meta.icon}</span>
-              <div className="flex-1 min-w-0">
-                <div className="text-xs font-bold text-gray-300 truncate">{meta.name}</div>
-                <div className={`text-[10px] font-black uppercase tracking-tighter ${isOffline ? 'text-red-500' : 'text-emerald-500'}`}>
-                  {isOffline ? 'Offline' : 'Connected'}
+            <div key={key} className={`relative group overflow-hidden rounded-2xl border transition-all duration-300 ${
+              isOffline 
+                ? 'bg-[#0d1219] border-red-500/10 opacity-60' 
+                : 'bg-gradient-to-br ' + meta.gradient + ' border-white/10 hover:border-white/20 shadow-lg hover:shadow-xl hover:-translate-y-0.5'
+            }`}>
+              <div className="p-4"> 
+                <div className="flex items-center gap-3 mb-2">
+                  <div className={`w-8 h-8 rounded-xl flex items-center justify-center text-base ${isOffline ? 'opacity-40' : ''}`}>
+                    {meta.icon}
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <div className="text-xs font-black text-white/90 truncate">{meta.name}</div>
+                  </div>
+                </div>
+                <div className="flex items-center justify-between">
+                  <div className={`flex items-center gap-1.5 text-[9px] font-black uppercase tracking-widest ${isOffline ? 'text-red-500' : 'text-emerald-400'}`}>
+                    <span className={`w-1.5 h-1.5 rounded-full ${isOffline ? 'bg-red-500' : 'bg-emerald-400 animate-pulse'}`} />
+                    {isOffline ? 'Offline' : 'Connected'}
+                  </div>
+                  {!isOffline ? <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400/60" /> : <Lock className="w-3.5 h-3.5 text-gray-600" />}
                 </div>
               </div>
-              {!isOffline ? <CheckCircle2 className="w-3.5 h-3.5 text-emerald-500 shrink-0" /> : <Lock className="w-3.5 h-3.5 text-gray-600 shrink-0" />}
             </div>
           );
         })}
       </div>
 
-      {/* Active Transaction */}
+      {/* ── Active Transaction Vector ── */}
       {lastTransaction && (
-        <div className="bg-[#111620] border border-[#1e2738] rounded-2xl p-5 shadow-sm">
-          <div className="text-[10px] uppercase text-gray-600 font-bold tracking-widest mb-3 border-l-2 border-emerald-500 pl-3">Active Ingress Vector</div>
-          <div className="grid grid-cols-4 gap-6 text-xs font-medium">
-            <div className="text-gray-500 capitalize">ID: <span className="text-gray-200 font-mono text-[10px] ml-1">{lastTransaction.transaction.transaction_id}</span></div>
-            <div className="text-gray-500 capitalize">Volume: <span className="text-emerald-500 font-bold ml-1">₹{lastTransaction.transaction.amount?.toLocaleString()}</span></div>
-            <div className="text-gray-500 capitalize">Identifier: <span className="text-gray-200 ml-1">{lastTransaction.transaction.user_id}</span></div>
-            <div className="text-gray-500 capitalize">Segment: <span className="text-gray-200 ml-1">{lastTransaction.transaction.merchant_category}</span></div>
+        <div className="bg-[#111620] border border-[#1e2738] rounded-2xl overflow-hidden shadow-lg">
+          <div className="px-5 py-3 bg-gradient-to-r from-emerald-500/5 to-transparent border-b border-[#1e2738]">
+            <div className="flex items-center gap-2">
+              <Activity className="w-3.5 h-3.5 text-emerald-400" />
+              <span className="text-[10px] uppercase text-emerald-400 font-black tracking-widest">Active Ingress Vector</span>
+              <span className="ml-auto text-[9px] font-mono text-gray-600">{new Date().toISOString()}</span>
+            </div>
+          </div>
+          <div className="grid grid-cols-4 gap-6 p-5 text-xs font-medium">
+            <div className="space-y-1">
+              <div className="text-[9px] text-gray-600 uppercase tracking-widest font-bold">Transaction ID</div>
+              <div className="text-gray-200 font-mono text-[11px]">{lastTransaction.transaction.transaction_id}</div>
+            </div>
+            <div className="space-y-1">
+              <div className="text-[9px] text-gray-600 uppercase tracking-widest font-bold">Volume</div>
+              <div className="text-emerald-400 font-black text-sm">₹{lastTransaction.transaction.amount?.toLocaleString()}</div>
+            </div>
+            <div className="space-y-1">
+              <div className="text-[9px] text-gray-600 uppercase tracking-widest font-bold">Identifier</div>
+              <div className="text-gray-200 font-medium">{lastTransaction.transaction.user_id}</div>
+            </div>
+            <div className="space-y-1">
+              <div className="text-[9px] text-gray-600 uppercase tracking-widest font-bold">Segment</div>
+              <div className="text-gray-200 font-medium capitalize">{lastTransaction.transaction.merchant_category?.replace('_', ' ')}</div>
+            </div>
           </div>
         </div>
       )}
 
       {error && <div className="bg-red-500/10 border border-red-500/20 rounded-xl p-4 text-red-400 text-sm animate-pulse">Critical: {error}</div>}
 
-      {/* Results */}
+      {/* ── Results ── */}
       {results && (
         <>
           {/* Consensus */}
@@ -146,7 +204,7 @@ export default function ModelCompare({ lastTransaction }) {
           {/* Per-model cards */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
             {results.predictions.map((pred) => {
-              const meta = MODEL_META[pred.model_used] || { name: pred.model_used, color: '#6b7280', icon: '⚪', available: false };
+              const meta = MODEL_META[pred.model_used] || { name: pred.model_used, color: '#6b7280', gradient: '', icon: '⚪', available: false };
               return (
                 <div key={pred.model_used} className={`bg-[#111620] border border-[#1e2738] rounded-2xl p-6 hover:border-emerald-500/30 transition-all group ${pred.offline ? 'opacity-40 grayscale-[0.5]' : 'shadow-lg hover:shadow-emerald-500/5'}`}>
                   <div className="flex items-center justify-between mb-5">
@@ -172,7 +230,7 @@ export default function ModelCompare({ lastTransaction }) {
                         <div className="w-full h-2 bg-[#0a0e14] rounded-full overflow-hidden p-0.5 border border-white/5">
                           <div className="h-full rounded-full transition-all duration-1000 ease-out" style={{
                             width: `${Math.round(pred.fraud_score * 100)}%`,
-                            backgroundColor: pred.fraud_score > 0.8 ? '#ef4444' : pred.fraud_score > 0.6 ? '#f97316' : pred.fraud_score > 0.3 ? '#eab308' : '#10b981'
+                            backgroundColor: pred.fraud_score > 0.9 ? '#ef4444' : pred.fraud_score > 0.8 ? '#f97316' : pred.fraud_score > 0.6 ? '#eab308' : '#10b981'
                           }} />
                         </div>
                       </div>
@@ -180,7 +238,7 @@ export default function ModelCompare({ lastTransaction }) {
                         "{pred.explanation}"
                       </p>
                       <div className="mt-4 pt-4 border-t border-white/5 flex items-center justify-between text-[9px] text-gray-600 font-bold uppercase tracking-widest">
-                        <span className="flex items-center"><ChevronRight className="w-3 h-3 mr-1 text-emerald-500" /> Latency Pipeline</span>
+                        <span className="flex items-center"><Cpu className="w-3 h-3 mr-1 text-emerald-500" /> Latency Pipeline</span>
                         <span>{pred.processing_time_ms.toFixed(0)} ms</span>
                       </div>
                     </>
@@ -200,20 +258,40 @@ export default function ModelCompare({ lastTransaction }) {
       )}
 
       {!results && !loading && (
-        <div className="border-2 border-dashed border-[#1e2738] rounded-3xl p-16 text-center text-gray-600 bg-[#0d1219]/50 shadow-inner">
-          <Brain className="w-12 h-12 mx-auto mb-4 opacity-10" />
-          <h3 className="text-lg font-black text-white uppercase tracking-tighter mb-2">Ready for Analysis</h3>
-          <p className="text-sm max-w-sm mx-auto mb-6 text-gray-500 leading-relaxed">
-            Click <strong className="text-emerald-500">Run Comparison</strong> to perform a parallel vector analysis across all connected enterprise LLM providers.
-          </p>
-          <div className="flex items-center justify-center space-x-6">
-             <div className="text-[10px] font-bold uppercase tracking-widest flex items-center"><span className="w-2 h-2 rounded-full bg-emerald-500 mr-2 shadow-sm shadow-emerald-500/40" /> Gemini (Live)</div>
-             <div className="text-[10px] font-bold uppercase tracking-widest flex items-center"><span className="w-2 h-2 rounded-full bg-emerald-500 mr-2 shadow-sm shadow-emerald-500/40" /> Groq (Live)</div>
-             <div className="text-[10px] font-bold uppercase tracking-widest flex items-center opacity-30 cursor-help" title="Add Key in Settings"><span className="w-2 h-2 rounded-full bg-gray-600 mr-2" /> Anthropic</div>
-             <div className="text-[10px] font-bold uppercase tracking-widest flex items-center opacity-30 cursor-help" title="Add Key in Settings"><span className="w-2 h-2 rounded-full bg-gray-600 mr-2" /> OpenAI</div>
+        <div className="relative overflow-hidden rounded-3xl border border-[#1e2738] bg-gradient-to-br from-[#0d1219] via-[#111620] to-[#0d1a2a] p-16 text-center shadow-inner">
+          {/* Animated background rings */}
+          <div className="absolute inset-0 flex items-center justify-center overflow-hidden">
+            <div className="w-64 h-64 rounded-full border border-white/[0.02] animate-pulse" />
+            <div className="absolute w-48 h-48 rounded-full border border-white/[0.03]" style={{animation: 'pulse 3s ease-in-out infinite'}} />
+            <div className="absolute w-32 h-32 rounded-full border border-white/[0.04]" style={{animation: 'pulse 2s ease-in-out infinite'}} />
+          </div>
+          <div className="relative">
+            <div className="inline-flex items-center justify-center p-5 bg-gradient-to-br from-white/5 to-white/[0.01] rounded-3xl border border-white/5 mb-6 shadow-2xl">
+              <Network className="w-10 h-10 text-gray-600" />
+            </div>
+            <h3 className="text-lg font-black text-white uppercase tracking-tighter mb-2">Ready for Analysis</h3>
+            <p className="text-sm max-w-md mx-auto mb-8 text-gray-500 leading-relaxed font-medium">
+              Click <strong className="text-emerald-400">Run Comparison</strong> to perform a parallel vector
+              analysis across all connected enterprise LLM providers.
+            </p>
+            <div className="flex items-center justify-center gap-8">
+              <div className="flex items-center gap-2 text-[10px] font-black uppercase tracking-widest text-gray-400">
+                <span className="w-2 h-2 rounded-full bg-emerald-400 shadow-sm shadow-emerald-400/50 animate-pulse" /> Gemini (Live)
+              </div>
+              <div className="flex items-center gap-2 text-[10px] font-black uppercase tracking-widest text-gray-400">
+                <span className="w-2 h-2 rounded-full bg-emerald-400 shadow-sm shadow-emerald-400/50 animate-pulse" /> Groq (Live)
+              </div>
+              <div className="flex items-center gap-2 text-[10px] font-black uppercase tracking-widest text-gray-600 opacity-50">
+                <span className="w-2 h-2 rounded-full bg-gray-600" /> Anthropic
+              </div>
+              <div className="flex items-center gap-2 text-[10px] font-black uppercase tracking-widest text-gray-600 opacity-50">
+                <span className="w-2 h-2 rounded-full bg-gray-600" /> OpenAI
+              </div>
+            </div>
           </div>
         </div>
       )}
+
       {/* ── Phase B: RBI Compliance Queue (below LLM UI) ── */}
       <ComplianceQueue />
     </div>

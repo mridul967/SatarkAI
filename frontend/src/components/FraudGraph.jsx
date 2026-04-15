@@ -133,7 +133,7 @@ export default function FraudGraph({ userId, API_URL }) {
   };
 
   return (
-    <div className="relative glass-card bg-slate-900/40 p-1">
+    <div className="relative w-full h-full">
       {/* HUD Header */}
       <div className="absolute top-4 left-6 flex items-center space-x-2 z-10">
         <div className="w-1 h-3 bg-emerald-500 rounded-full animate-pulse"></div>

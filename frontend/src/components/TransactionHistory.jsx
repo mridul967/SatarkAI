@@ -54,16 +54,16 @@ export default function TransactionHistory() {
     <div className="max-w-6xl mx-auto space-y-5 animate-slide-up">
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
-          <h1 className="text-3xl font-bold text-white tracking-tight">System Logs</h1>
-          <p className="text-gray-500 mt-1">Full transaction registry with multi-vector risk persistence.</p>
+          <h1 className="text-3xl font-bold text-black tracking-tight">System Logs</h1>
+          <p className="text-black/60 mt-1">Full transaction registry with multi-vector risk persistence.</p>
         </div>
-        
+
         <div className="flex items-center space-x-3 bg-[#111620] p-1.5 rounded-xl border border-[#1e2738]">
           <div className="flex items-center space-x-2 px-3">
             <span className="text-[10px] uppercase font-bold text-gray-600">From</span>
-            <input 
-              type="date" 
-              value={startDate} 
+            <input
+              type="date"
+              value={startDate}
               onChange={(e) => setStartDate(e.target.value)}
               className="bg-transparent border-none text-xs text-gray-300 focus:ring-0 p-0"
             />
@@ -71,9 +71,9 @@ export default function TransactionHistory() {
           <div className="w-px h-4 bg-[#1e2738]" />
           <div className="flex items-center space-x-2 px-3">
             <span className="text-[10px] uppercase font-bold text-gray-600">To</span>
-            <input 
-              type="date" 
-              value={endDate} 
+            <input
+              type="date"
+              value={endDate}
               onChange={(e) => setEndDate(e.target.value)}
               className="bg-transparent border-none text-xs text-gray-300 focus:ring-0 p-0"
             />
@@ -124,7 +124,6 @@ export default function TransactionHistory() {
                 <th className="px-6 py-4">Anomaly Score</th>
                 <th className="px-6 py-4 text-center">Latency</th>
                 <th className="px-6 py-4">Risk Engine</th>
-                <th className="px-6 py-4">Model</th>
                 <th className="px-6 py-4">Timestamp</th>
               </tr>
             </thead>
@@ -137,10 +136,10 @@ export default function TransactionHistory() {
                   <td className="px-6 py-4 text-gray-500">{txn.location}</td>
                   <td className="px-6 py-4 shrink-0">
                     <div className="flex items-center space-x-2">
-                       <div className="w-12 h-1 bg-[#0a0e14] rounded-full overflow-hidden">
-                          <div className="h-full bg-emerald-500" style={{ width: `${(txn.fraud_score || 0) * 100}%` }} />
-                       </div>
-                       <span className="font-mono text-xs text-gray-400">{(txn.fraud_score * 100).toFixed(1)}%</span>
+                      <div className="w-12 h-1 bg-[#0a0e14] rounded-full overflow-hidden">
+                        <div className="h-full bg-emerald-500" style={{ width: `${(txn.fraud_score || 0) * 100}%` }} />
+                      </div>
+                      <span className="font-mono text-xs text-gray-400">{(txn.fraud_score * 100).toFixed(1)}%</span>
                     </div>
                   </td>
                   <td className="px-6 py-4 text-center">
@@ -151,9 +150,8 @@ export default function TransactionHistory() {
                       {txn.risk_level || 'UNKNOWN'}
                     </span>
                   </td>
-                  <td className="px-6 py-4 text-[10px] text-gray-600 font-medium">{txn.model_used || 'central'}</td>
                   <td className="px-6 py-4 text-[10px] text-gray-500 font-mono italic">
-                    {txn.created_at ? new Date(txn.created_at).toLocaleString() : '—'}
+                    {txn.timestamp ? new Date(txn.timestamp).toLocaleString() : '—'}
                   </td>
                 </tr>
               ))}

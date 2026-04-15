@@ -166,7 +166,7 @@ def queue_fmr1(transaction_id: str, pdf_bytes: bytes, transaction: dict,
                fraud_score: float, llm_explanation: str = "",
                institution_type: str = "NBFC"):
     """Save FMR-1 draft to database + disk for permanent storage."""
-    risk_level = "CRITICAL" if fraud_score > 0.8 else "HIGH" if fraud_score > 0.6 else "MEDIUM" if fraud_score > 0.3 else "SAFE"
+    risk_level = "CRITICAL" if fraud_score > 0.9 else "HIGH" if fraud_score > 0.8 else "MEDIUM" if fraud_score > 0.6 else "SAFE"
     db_service.save_compliance_report(
         transaction_id=transaction_id,
         user_id=transaction.get("user_id", "N/A"),
@@ -209,6 +209,11 @@ def get_fmr1_draft(transaction_id: str) -> Optional[dict]:
     else:
         report["pdf"] = None
     return report
+
+
+def resolve_draft(transaction_id: str):
+    """Mark a compliance draft as RESOLVED (Submitted)."""
+    db_service.update_compliance_status(transaction_id, "RESOLVED")
 
 
 # ── Private helpers ────────────────────────────────────────

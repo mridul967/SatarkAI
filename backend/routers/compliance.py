@@ -65,3 +65,10 @@ async def force_generate_fmr1(txn_id: str, background_tasks: BackgroundTasks):
 
     background_tasks.add_task(_regen)
     return {"status": "Regeneration queued", "transaction_id": txn_id}
+
+
+@router.post("/resolve/{txn_id}")
+async def resolve_fmr1(txn_id: str):
+    """Mark an FMR-1 draft as resolved (submitted)."""
+    compliance_service.resolve_draft(txn_id)
+    return {"status": "Resolved", "transaction_id": txn_id}

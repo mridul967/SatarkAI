@@ -23,6 +23,15 @@ from typing import Optional, List, Dict, Any
 
 router = APIRouter()
 
+@router.get("/providers")
+async def get_providers():
+    return {
+        "claude": llm_service.is_provider_available("claude"),
+        "gemini": llm_service.is_provider_available("gemini"),
+        "gpt4o": llm_service.is_provider_available("gpt4o"),
+        "groq": llm_service.is_provider_available("groq")
+    }
+
 @router.post("/", response_model=FraudPrediction)
 async def predict(txn: Transaction, background_tasks: BackgroundTasks):
     # 1. Check Redis Cache (33ms hot-path target)
@@ -45,7 +54,7 @@ async def predict(txn: Transaction, background_tasks: BackgroundTasks):
     model_service.record_latency(latency_ms)
     
     final_score = result["score"]
-    risk_level = "CRITICAL" if final_score > 0.8 else "HIGH" if final_score > 0.6 else "MEDIUM" if final_score > 0.3 else "SAFE"
+    risk_level = "CRITICAL" if final_score > 0.9 else "HIGH" if final_score > 0.8 else "MEDIUM" if final_score > 0.6 else "SAFE"
 
     # 3. Async LLM Consensus & Drift Detection
     drift_detector.add_transaction(features)
@@ -67,7 +76,7 @@ async def predict(txn: Transaction, background_tasks: BackgroundTasks):
     )
     
     # ── TIERED STORAGE CENSUS (DPDP ACT COMPLIANCE) ──
-    STORE_FULL    = final_score > 0.55                          # CRITICAL + SUSPICIOUS always
+    STORE_FULL    = final_score > 0.60                          # MEDIUM + HIGH + CRITICAL always
     NEW_USER      = features.get("account_age_days", 999) < 30
     RANDOM_SAMPLE = random.random() < 0.02                      # 2% of safe traffic
 
@@ -107,9 +116,9 @@ async def compare_predict(txn: Transaction):
         # Calculate consensus based on existing
         avg_score = sum(p["fraud_score"] for p in predictions) / len(predictions)
         consensus_risk = "SAFE"
-        if avg_score > 0.8: consensus_risk = "CRITICAL"
-        elif avg_score > 0.6: consensus_risk = "HIGH"
-        elif avg_score > 0.3: consensus_risk = "MEDIUM"
+        if avg_score > 0.9: consensus_risk = "CRITICAL"
+        elif avg_score > 0.8: consensus_risk = "HIGH"
+        elif avg_score > 0.6: consensus_risk = "MEDIUM"
         
         return {
             "consensus_score": avg_score,
@@ -152,11 +161,14 @@ USER_PROFILES = {
     "usr_1002": {"devices": ["dev_102"], "ips": ["103.21.244.2", "45.33.32.156"], "locations": ["Delhi", "Bengaluru"], "behavior": "traveler"},
     "usr_1003": {"devices": ["dev_103", "dev_104", "dev_105"], "ips": ["192.168.1.50", "103.21.244.1"], "locations": ["Mumbai", "Chennai"], "behavior": "fraudster"},
     "usr_1004": {"devices": ["dev_101", "dev_102"], "ips": ["45.33.32.156"], "locations": ["Hyderabad"], "behavior": "shared_device"},
+    # Suspicious but legitimate — first-time large purchaser, new city login, etc.
+    "usr_1005": {"devices": ["dev_106", "dev_107"], "ips": ["103.21.244.2", "45.33.32.156"], "locations": ["Delhi", "Chennai", "Bengaluru"], "behavior": "suspicious_legit"},
+    "usr_1006": {"devices": ["dev_101"], "ips": ["103.21.244.1", "192.168.1.50"], "locations": ["Mumbai", "Hyderabad"], "behavior": "suspicious_legit"},
 }
 
 # Fallback pools for other users
 USER_POOL = [f"usr_{i}" for i in range(1001, 1009)]
-DEVICE_POOL = [f"dev_{i}" for i in range(101, 106)]
+DEVICE_POOL = [f"dev_{i}" for i in range(101, 108)]
 IP_POOL = ["103.21.244.1", "103.21.244.2", "192.168.1.50", "45.33.32.156"]
 MERCHANT_POOL = ["mcht_crypto_1", "mcht_grocery_2", "mcht_electronics_3", "mcht_gaming_4"]
 CATEGORY_POOL = ["crypto_exchange", "grocery", "electronics", "online_gaming"]
@@ -166,7 +178,17 @@ async def websocket_endpoint(websocket: WebSocket):
     await websocket.accept()
     try:
         while True:
-            user_id = random.choice(USER_POOL)
+            # ── Weighted Profile Selection (Real-World Distribution) ──
+            # 95% Benign | 3% Suspicious-but-legit | 1.5% Anomalous | 0.5% Fraudster
+            rand_val = random.random()
+            if rand_val < 0.005:
+                user_id = "usr_1003"  # Confirmed Fraudster
+            elif rand_val < 0.020:
+                user_id = random.choice(["usr_1002", "usr_1004"])  # Traveler / Shared Device
+            elif rand_val < 0.050:
+                user_id = random.choice(["usr_1005", "usr_1006"])  # Suspicious but legitimate
+            else:
+                user_id = random.choice([u for u in USER_POOL if u not in ["usr_1002", "usr_1003", "usr_1004", "usr_1005", "usr_1006"]])
             profile = USER_PROFILES.get(user_id)
             
             if profile:
@@ -203,34 +225,48 @@ async def websocket_endpoint(websocket: WebSocket):
             txn_obj = Transaction(**txn_dict)
             graph_service.add_transaction(txn_obj)
 
-            # Realistic Scoring Logic for Simulator
-            score = round(random.uniform(0.05, 0.50), 2)
-            reason = "Legitimate profile"
+            # ── Realistic Scoring (Calibrated Thresholds: 60/80/90) ──
+            # 0-60% SAFE | 60-80% MEDIUM (review) | 80-90% HIGH (escalate) | 90-100% CRITICAL (auto-block)
+            score = round(random.uniform(0.01, 0.15), 4)  # Base: 1%–15% for legitimate traffic
+            reason = "Legitimate profile — no anomalies detected."
             
             if behavior == "fraudster" and amount > 15000:
-                score = round(random.uniform(0.8, 0.99), 2)
-                reason = "High risk behavior: Multiple devices and extreme amount."
+                score = round(random.uniform(0.90, 0.99), 4)
+                reason = "CRITICAL: Multi-device fraud ring with extreme transaction velocity."
+            elif behavior == "fraudster":
+                score = round(random.uniform(0.80, 0.92), 4)
+                reason = "HIGH: Known fraudster profile detected."
+            elif behavior == "suspicious_legit" and amount > 5000:
+                score = round(random.uniform(0.55, 0.78), 4)
+                reason = "Elevated: First-time large purchase from new location. Manual review recommended."
+            elif behavior == "suspicious_legit":
+                score = round(random.uniform(0.30, 0.60), 4)
+                reason = "Mildly anomalous: Multi-city login pattern. Likely legitimate travel."
             elif behavior == "shared_device" and amount > 8000:
-                score = round(random.uniform(0.5, 0.75), 2)
-                reason = "Medium risk: Shared device detected with unusual volume."
+                score = round(random.uniform(0.60, 0.79), 4)
+                reason = "MEDIUM: Shared device fingerprint with unusual volume. Flagged for review."
+            elif behavior == "shared_device":
+                score = round(random.uniform(0.20, 0.50), 4)
+                reason = "Low-medium: Shared device detected but transaction within norms."
             elif amount > 40000:
-                score = round(random.uniform(0.7, 0.9), 2)
-                reason = "High risk: Large transaction outside normal bounds."
-            elif amount < 500:
-                score = round(random.uniform(0.01, 0.15), 2)
-                reason = "Safe: Small transaction within typical bounds."
+                score = round(random.uniform(0.40, 0.70), 4)
+                reason = "Elevated: Large transaction outside normal spending bounds."
+            elif amount < 200:
+                score = round(random.uniform(0.005, 0.05), 4)
+                reason = "Safe: Micro-transaction within typical bounds."
                 
-            risk = "CRITICAL" if score > 0.8 else "HIGH" if score > 0.6 else "MEDIUM" if score > 0.3 else "SAFE"
+            risk = "CRITICAL" if score > 0.9 else "HIGH" if score > 0.8 else "MEDIUM" if score > 0.6 else "SAFE"
             
             # Simulated Latency for the WebSocket Feed
             simulated_latency = round(random.uniform(18.0, 48.0), 2)
-            if score > 0.8: simulated_latency += 10 # Slightly more for complex cases
+            if score > 0.9: simulated_latency += 10 # Slightly more for complex cases
 
             prediction = {
                 "fraud_score": score,
                 "risk_level": risk,
                 "reason": reason,
                 "latency_ms": simulated_latency,
+                "processing_time_ms": simulated_latency,
                 "alert_en": get_alert(risk, "en", score=int(score*100), txn_id=txn_dict["transaction_id"]),
                 "alert_hi": get_alert(risk, "hi", score=int(score*100), txn_id=txn_dict["transaction_id"])
             }
@@ -245,7 +281,7 @@ async def websocket_endpoint(websocket: WebSocket):
             await websocket.send_text(json.dumps(payload))
 
             # ── PHASE B: Auto-trigger 4-LLM Consensus & FMR-1 for CRITICAL transactions ──
-            if score > 0.8:
+            if score > 0.9:  # Only auto-trigger for CRITICAL (90%+ confidence)
                 try:
                     # 1. Trigger full 4-LLM consensus analysis
                     features = extract_features(txn_obj)

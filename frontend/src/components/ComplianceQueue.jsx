@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { AlertTriangle, Download, RefreshCw, FileText, Clock, Shield, ChevronRight, Loader2 } from 'lucide-react';
+import { AlertTriangle, Download, RefreshCw, FileText, Clock, Shield, ChevronRight, Loader2, CheckCircle } from 'lucide-react';
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000';
 
@@ -8,6 +8,8 @@ export default function ComplianceQueue() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
   const [downloading, setDownloading] = useState(null);
+  const [resolving, setResolving] = useState(null);
+  const [showToast, setShowToast] = useState(false);
 
   const fetchQueue = async () => {
     setLoading(true);
@@ -51,6 +53,21 @@ export default function ComplianceQueue() {
     }
   };
 
+  const handleResolve = async (txnId) => {
+    setResolving(txnId);
+    try {
+      const res = await fetch(`${API_URL}/api/compliance/resolve/${txnId}`, { method: 'POST' });
+      if (!res.ok) throw new Error('Resolution failed');
+      await fetchQueue(); // Refresh the list
+      setShowToast(true);
+      setTimeout(() => setShowToast(false), 5000);
+    } catch (err) {
+      console.error('Resolution error:', err);
+    } finally {
+      setResolving(null);
+    }
+  };
+
   const parseTimestamp = (ts) => {
     // Handle both Unix timestamps (number) and ISO datetime strings
     if (typeof ts === 'number') return ts;
@@ -85,18 +102,18 @@ export default function ComplianceQueue() {
             <Shield className="w-5 h-5 text-red-400" />
           </div>
           <div>
-            <h2 className="text-lg font-black text-white uppercase tracking-tight">
+            <h2 className="text-lg font-black text-black uppercase tracking-tight">
               RBI Compliance Queue
             </h2>
-            <p className="text-[10px] text-gray-500 uppercase tracking-widest font-bold">
+            <p className="text-[10px] text-black/60 uppercase tracking-widest font-bold">
               FMR-1 Drafts · RBI Master Directions 2024 · Auto-generated
             </p>
           </div>
         </div>
         <div className="flex items-center gap-3">
-          {queue.length > 0 && (
+          {queue.filter(i => i.status !== 'RESOLVED').length > 0 && (
             <span className="px-3 py-1.5 bg-red-500/10 border border-red-500/20 rounded-lg text-[10px] font-black text-red-400 uppercase tracking-widest">
-              {queue.length} Pending
+              {queue.filter(i => i.status !== 'RESOLVED').length} Pending
             </span>
           )}
           <button
@@ -145,11 +162,14 @@ export default function ComplianceQueue() {
           {queue.map((item) => {
             const deadline = getDeadlineInfo(item.queued_at, item.institution_type);
             const isUrgent = deadline.remaining <= 3;
+            const isResolved = item.status === 'RESOLVED';
             return (
               <div
                 key={item.transaction_id}
                 className={`bg-[#111620] border rounded-2xl p-5 transition-all hover:shadow-lg group ${
-                  isUrgent
+                  isResolved
+                    ? 'border-emerald-500/30 bg-emerald-500/[0.02] hover:border-emerald-500/50 hover:shadow-emerald-500/5'
+                    : isUrgent
                     ? 'border-red-500/30 hover:border-red-500/50 hover:shadow-red-500/5'
                     : 'border-[#1e2738] hover:border-emerald-500/30 hover:shadow-emerald-500/5'
                 }`}
@@ -158,16 +178,22 @@ export default function ComplianceQueue() {
                   {/* Left: Status + Info */}
                   <div className="flex items-center gap-4 flex-1 min-w-0">
                     <div className={`p-2.5 rounded-xl border ${
-                      isUrgent
+                      isResolved
+                        ? 'bg-emerald-500/10 border-emerald-500/20'
+                        : isUrgent
                         ? 'bg-red-500/10 border-red-500/20'
                         : 'bg-orange-500/10 border-orange-500/20'
                     }`}>
-                      <AlertTriangle className={`w-4 h-4 ${isUrgent ? 'text-red-400' : 'text-orange-400'}`} />
+                      {isResolved ? (
+                        <CheckCircle className="w-4 h-4 text-emerald-400" />
+                      ) : (
+                        <AlertTriangle className={`w-4 h-4 ${isUrgent ? 'text-red-400' : 'text-orange-400'}`} />
+                      )}
                     </div>
                     <div className="min-w-0 flex-1">
                       <div className="flex items-center gap-2 mb-1 flex-wrap">
-                        <span className="text-[10px] font-black text-red-400 uppercase tracking-widest">
-                          Action Required
+                        <span className={`text-[10px] font-black uppercase tracking-widest ${isResolved ? 'text-emerald-400' : 'text-red-400'}`}>
+                          {isResolved ? 'FMR-1 Submitted' : 'Action Required'}
                         </span>
                         <span className="text-[9px] font-mono text-gray-600">•</span>
                         <span className="text-[10px] font-mono text-gray-400 truncate">
@@ -203,23 +229,58 @@ export default function ComplianceQueue() {
                     </span>
                   </div>
 
-                  {/* Right: Download */}
-                  <button
-                    onClick={() => handleDownload(item.transaction_id)}
-                    disabled={downloading === item.transaction_id}
-                    className="flex items-center gap-2 px-5 py-2.5 bg-[#E6F1FB] hover:bg-[#d0e6f7] text-[#0C447C] text-[10px] font-black uppercase tracking-widest rounded-xl transition-all shadow-sm hover:shadow-md disabled:opacity-50 shrink-0 border border-[#0C447C]/10"
-                  >
-                    {downloading === item.transaction_id ? (
-                      <Loader2 className="w-3.5 h-3.5 animate-spin" />
-                    ) : (
-                      <Download className="w-3.5 h-3.5" />
+                  {/* Right: Actions */}
+                  <div className="flex items-center gap-2">
+                    {!isResolved && (
+                      <button
+                        onClick={() => handleResolve(item.transaction_id)}
+                        disabled={resolving === item.transaction_id}
+                        className="flex items-center gap-2 px-5 py-2.5 bg-[#111620] hover:bg-emerald-500 text-gray-400 hover:text-white text-[10px] font-black uppercase tracking-widest rounded-xl transition-all border border-[#1e2738] hover:border-emerald-500 disabled:opacity-50"
+                      >
+                        {resolving === item.transaction_id ? (
+                          <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                        ) : (
+                          <CheckCircle className="w-3.5 h-3.5" />
+                        )}
+                        Submit
+                      </button>
                     )}
-                    Download FMR-1 Draft
-                  </button>
+
+                    <button
+                      onClick={() => handleDownload(item.transaction_id)}
+                      disabled={downloading === item.transaction_id}
+                      className="flex items-center gap-2 px-5 py-2.5 bg-[#E6F1FB] hover:bg-[#d0e6f7] text-[#0C447C] text-[10px] font-black uppercase tracking-widest rounded-xl transition-all shadow-sm hover:shadow-md disabled:opacity-50 shrink-0 border border-[#0C447C]/10"
+                    >
+                      {downloading === item.transaction_id ? (
+                        <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                      ) : (
+                        <Download className="w-3.5 h-3.5" />
+                      )}
+                      Download FMR-1 Draft
+                    </button>
+                  </div>
                 </div>
               </div>
             );
           })}
+        </div>
+      )}
+
+      {/* Submission Toast */}
+      {showToast && (
+        <div className="fixed bottom-8 right-8 z-[100] animate-in fade-in slide-in-from-bottom-5 duration-300">
+          <div className="bg-[#0C447C] text-white px-6 py-4 rounded-2xl shadow-2xl border border-white/10 flex items-center gap-4">
+            <div className="bg-white/20 p-2 rounded-xl">
+              <CheckCircle className="w-5 h-5 text-white" />
+            </div>
+            <div>
+              <div className="text-xs font-black uppercase tracking-widest">Forensic Success</div>
+              <div className="text-[10px] opacity-80 font-bold">FMR-1 form submitted to the RBI agent</div>
+            </div>
+            <button onClick={() => setShowToast(false)} className="ml-4 opacity-50 hover:opacity-100 transition-opacity">
+              <ChevronRight className="w-4 h-4 rotate-90" />
+            </button>
+          </div>
         </div>
       )}
     </div>
