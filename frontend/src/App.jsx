@@ -28,7 +28,10 @@ function App() {
   const [activeTab, setActiveTab] = useState('dashboard');
   const [showIntro, setShowIntro] = useState(true);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
-  const { isConnected, lastTransaction, data } = useWebSocket('ws://localhost:8000/ws/transactions');
+  
+  const wsProtocol = API_URL.startsWith('https') ? 'wss' : 'ws';
+  const WS_URL = `${API_URL.replace(/^https?:\/\//, `${wsProtocol}://`)}/ws/transactions`;
+  const { isConnected, lastTransaction, data } = useWebSocket(WS_URL);
   
   const [lang, setLang] = useState(() => localStorage.getItem('sartak_lang') || 'en');
 
