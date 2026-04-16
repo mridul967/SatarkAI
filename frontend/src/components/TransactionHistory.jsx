@@ -4,6 +4,48 @@ import LatencyBadge from './LatencyBadge';
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000';
 
+const FeedbackButtons = ({ txn }) => {
+  const [submitted, setSubmitted] = useState(false);
+
+  const submitFeedback = async (label) => {
+    await fetch(`${API_URL}/api/explain/analyst/feedback`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        txn_id: txn.transaction_id,
+        raw_score: txn.raw_score ?? txn.fraud_score,
+        analyst_label: label,
+      }),
+    });
+    setSubmitted(true);
+  };
+
+  if (submitted) return <span style={{ color: "#1D9E75", fontSize: 11 }}>✓ Logged</span>;
+
+  return (
+    <div style={{ display: "flex", gap: 6 }}>
+      <button
+        onClick={() => submitFeedback(1)}
+        style={{
+          fontSize: 10, padding: "2px 8px", borderRadius: 4,
+          background: "#FCEBEB", color: "#A32D2D", border: "none", cursor: "pointer"
+        }}
+      >
+        Confirm Fraud
+      </button>
+      <button
+        onClick={() => submitFeedback(0)}
+        style={{
+          fontSize: 10, padding: "2px 8px", borderRadius: 4,
+          background: "#E1F5EE", color: "#085041", border: "none", cursor: "pointer"
+        }}
+      >
+        False Positive
+      </button>
+    </div>
+  );
+};
+
 export default function TransactionHistory() {
   const [transactions, setTransactions] = useState([]);
   const [stats, setStats] = useState(null);
@@ -151,7 +193,20 @@ export default function TransactionHistory() {
                     </span>
                   </td>
                   <td className="px-6 py-4 text-[10px] text-gray-500 font-mono italic">
-                    {txn.timestamp ? new Date(txn.timestamp).toLocaleString() : '—'}
+                    {(() => {
+                      if (!txn.timestamp) return '—';
+                      const d = new Date(txn.timestamp);
+                      // If invalid, try parsing as a Unix timestamp (seconds)
+                      if (isNaN(d.getTime())) {
+                        const num = Number(txn.timestamp);
+                        if (!isNaN(num)) {
+                          // Multiply by 1000 if it looks like seconds (small number)
+                          return new Date(num * (num < 1e12 ? 1000 : 1)).toLocaleString();
+                        }
+                        return 'Invalid Date';
+                      }
+                      return d.toLocaleString();
+                    })()}
                   </td>
                 </tr>
               ))}

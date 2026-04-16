@@ -195,15 +195,29 @@ class DatabaseService:
 
     def get_stats(self) -> dict:
         conn = self._get_conn()
+        
+        # Total keeps counting forever for scale
         total = conn.execute("SELECT COUNT(*) as c FROM transactions").fetchone()["c"]
+        
+        # Flagged count is ALL-TIME so detected anomalies never vanish from the dashboard
         flagged = conn.execute("SELECT COUNT(*) as c FROM transactions WHERE risk_level IN ('HIGH','CRITICAL')").fetchone()["c"]
-        avg_score = conn.execute("SELECT AVG(fraud_score) as a FROM transactions").fetchone()["a"] or 0
+        
+        # Averages and flag rates use a rolling window for model health monitoring
+        recent_window = 500
+        
+        avg_score = conn.execute(f"SELECT AVG(fraud_score) as a FROM (SELECT fraud_score FROM transactions ORDER BY created_at DESC LIMIT {recent_window})").fetchone()["a"] or 0
+        
+        # Flag rate based on rolling window (model health metric)
+        recent_flagged = conn.execute(f"SELECT COUNT(*) as c FROM (SELECT risk_level FROM transactions ORDER BY created_at DESC LIMIT {recent_window}) WHERE risk_level IN ('HIGH','CRITICAL')").fetchone()["c"]
+        
         conn.close()
+        
+        window_size = min(total, recent_window)
         return {
             "total_transactions": total,
             "flagged_transactions": flagged,
             "average_fraud_score": round(avg_score, 4),
-            "flag_rate": round(flagged / max(total, 1) * 100, 2)
+            "flag_rate": round(recent_flagged / max(window_size, 1) * 100, 2)
         }
 
     # ── Compliance Report Methods ──────────────────────────

@@ -9,14 +9,50 @@ import asyncio
 import time
 import random
 import math
-from fastapi import APIRouter
+import json
+from fastapi import APIRouter, WebSocket, WebSocketDisconnect
 from fastapi.responses import JSONResponse, Response
+from pydantic import BaseModel
 
 from services.attack_sampler import sample_attack, ATTACK_CATALOG
 from services.model_service import model_service
 from services import compliance_service
+from services.database_service import db_service
 
 router = APIRouter()
+
+class DemoConnectionManager:
+    def __init__(self):
+        self.active_connections: list[WebSocket] = []
+
+    async def connect(self, websocket: WebSocket):
+        await websocket.accept()
+        self.active_connections.append(websocket)
+
+    def disconnect(self, websocket: WebSocket):
+        if websocket in self.active_connections:
+            self.active_connections.remove(websocket)
+
+    async def broadcast(self, message: dict):
+        # We stringify the json
+        text_data = json.dumps(message)
+        for connection in self.active_connections:
+            try:
+                await connection.send_text(text_data)
+            except Exception:
+                pass
+
+demo_manager = DemoConnectionManager()
+
+@router.websocket("/ws/alerts")
+async def demo_alerts_ws(websocket: WebSocket):
+    await demo_manager.connect(websocket)
+    try:
+        while True:
+            # Just keep connection open until client drops
+            await websocket.receive_text()
+    except WebSocketDisconnect:
+        demo_manager.disconnect(websocket)
 
 
 # ── Catalog endpoint — frontend reads this to build the UI ──────────────────
@@ -152,7 +188,7 @@ async def fire_attack(attack_type: str):
         peak_score = max(peak_score, score)
         total_latency += lat_ms
 
-        results.append({
+        txn_dict = {
             "transaction_id": txn["transaction_id"],
             "sender":         txn["sender"],
             "receiver":       txn["receiver"],
@@ -162,7 +198,32 @@ async def fire_attack(attack_type: str):
             "scenario":       txn.get("scenario"),
             "city":           txn.get("city"),
             "graph_contribution": result.get("graph_contribution", {}),
-        })
+        }
+        results.append(txn_dict)
+
+        # ─── FIX: Use ISO format string for database consistency ───
+        from datetime import datetime
+        db_txn_data = {
+            "transaction_id": txn["transaction_id"],
+            "user_id": txn["sender"],
+            "amount": txn["amount"],
+            "merchant_id": txn["receiver"],
+            "device_id": txn.get("session_id", "demo-device"),
+            "ip_address": txn.get("ip_address", "127.0.0.1"),
+            "timestamp": datetime.utcnow().isoformat() + "Z",
+            "location": txn.get("city", "Unknown"),
+            "merchant_category": txn.get("merchant_category", "Demo"),
+        }
+        db_prediction = {
+            "fraud_score": score,
+            "risk_level": "CRITICAL" if score >= 0.9 else "HIGH" if score >= 0.8 else "SAFE",
+            "explanation": f"Simulated {attack_type} attack (Demo)",
+            "model_used": "satark_gat",
+            "processing_time_ms": lat_ms,
+            "graph_signals": result.get("graph_contribution", {})
+        }
+        db_service.save_transaction(db_txn_data, db_prediction)
+        db_service.update_user_aggregate(db_txn_data)
 
     # Determine final system action
     if tier == "CRITICAL" or peak_score >= 0.90:
@@ -180,7 +241,7 @@ async def fire_attack(attack_type: str):
     else:
         action = "OTP_REQUIRED"
 
-    return {
+    payload = {
         "attack_type":    attack_type,
         "tier":           tier,
         "action":         action,
@@ -190,23 +251,11 @@ async def fire_attack(attack_type: str):
         "modus_operandi": _modus_operandi(attack_type, results, peak_score),
         "fmr1_queued":    action == "AUTO_BLOCKED",
     }
+    
+    # Broadcast to Login screen
+    asyncio.create_task(demo_manager.broadcast(payload))
 
-
-# ── FMR-1 download endpoint ─────────────────────────────────────────────────
-@router.get("/fmr1/{transaction_id}")
-async def download_fmr1(transaction_id: str):
-    """Download a generated FMR-1 draft report."""
-    entry = compliance_service.get_fmr1_draft(transaction_id)
-    if not entry or not entry.get("pdf"):
-        return JSONResponse(status_code=404, content={"error": "FMR-1 draft not found. It may still be generating."})
-
-    return Response(
-        content=entry["pdf"],
-        media_type="text/plain",
-        headers={
-            "Content-Disposition": f"attachment; filename=FMR1_{transaction_id}.txt"
-        }
-    )
+    return payload
 
 
 async def _queue_fmr1(transaction, fraud_score, graph_data, llm_explanation):
@@ -216,11 +265,45 @@ async def _queue_fmr1(transaction, fraud_score, graph_data, llm_explanation):
         graph_data      = graph_data,
         llm_explanation = llm_explanation,
     )
+    # Actually queue to persistent DB instead of just array memory
+    compliance_service.queue_fmr1(
+        transaction_id  = transaction["transaction_id"],
+        pdf_bytes       = report_bytes,
+        transaction     = transaction,
+        fraud_score     = fraud_score,
+        llm_explanation = llm_explanation
+    )
+    # Also save to old memory queue for fallback
     compliance_service.compliance_queue[transaction["transaction_id"]] = {
         "pdf": report_bytes, "queued_at": time.time(),
         "transaction": transaction, "fraud_score": fraud_score,
     }
 
+
+class OTPResultPayload(BaseModel):
+    transaction_id: str
+    action: str  # DECLINED or VERIFIED
+    amount: float
+    attack_type: str = "Demo OTP Rejection"
+    score: float = 0.85
+
+@router.post("/otp_result")
+async def resolve_otp(payload: OTPResultPayload):
+    """
+    Simulates the Victim replying to an OTP verification.
+    If DECLINED, the system stores it as fraud and generates an FMR-1.
+    """
+    if payload.action == "DECLINED":
+        txn_data = {"transaction_id": payload.transaction_id, "amount": payload.amount}
+        asyncio.create_task(_queue_fmr1(
+            transaction=txn_data,
+            fraud_score=payload.score,
+            graph_data={"associated_accounts": [], "scenario": payload.attack_type},
+            llm_explanation=f"User declined authentication prompt via OTP. Funds intercepted. Amount: {payload.amount}"
+        ))
+        return {"status": "fraud_confirmed", "fmr_queued": True}
+    
+    return {"status": "ok"}
 
 def _modus_operandi(attack_type: str, results: list, peak_score: float) -> str:
     """

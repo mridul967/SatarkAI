@@ -110,7 +110,9 @@ export default function ModelCompare({ lastTransaction }) {
       {/* ── Model Provider Cards ── */}
       <div className="grid grid-cols-4 gap-3">
         {Object.entries(MODEL_META).map(([key, meta]) => {
-          const isOffline = providerStatus ? !providerStatus[key] : !meta.available;
+          // Force claude and gpt4o to show as disconnected per user request
+          const forceOffline = (key === 'claude' || key === 'gpt4o');
+          const isOffline = forceOffline || (providerStatus ? !providerStatus[key] : !meta.available);
           
           return (
             <div key={key} className={`relative group overflow-hidden rounded-2xl border transition-all duration-300 ${

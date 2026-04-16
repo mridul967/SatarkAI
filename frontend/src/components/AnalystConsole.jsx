@@ -77,8 +77,8 @@ export default function AnalystConsole({ transaction, prediction, onEscalate, la
           <div className="flex items-center gap-3">
             <BrainCircuit className={`w-5 h-5 ${getRiskColor(prediction?.risk_level)}`} />
             <div>
-              <span className="text-[8px] font-bold uppercase tracking-widest text-white/30 block">AI Classification</span>
-              <span className={`text-lg font-black tracking-tight ${getRiskColor(prediction?.risk_level)}`}>{prediction?.risk_level || 'IDLE'}</span>
+            <span className="text-[8px] font-bold uppercase tracking-widest text-white/30 block">Ensemble Classification</span>
+            <span className={`text-lg font-black tracking-tight ${getRiskColor(prediction?.risk_level)}`}>{prediction?.risk_level || 'IDLE'}</span>
             </div>
           </div>
           <div className="text-right">

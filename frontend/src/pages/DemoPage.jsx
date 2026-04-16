@@ -199,23 +199,6 @@ export default function DemoPage() {
       setResult(data);
       setFireCount(c => c + 1);
 
-      // Show mobile notification
-      const notifMsg =
-        data.action === "AUTO_BLOCKED"
-          ? `Transaction AUTO-BLOCKED. Score: ${(data.peak_score*100).toFixed(0)}%. FMR-1 draft generated.`
-          : `Unusual activity detected. Score: ${(data.peak_score*100).toFixed(0)}%. OTP verification required.`;
-
-      setNotification({ msg: notifMsg, tier: data.tier });
-
-      // High alert → OTP modal after brief delay
-      if (data.action === "OTP_REQUIRED") {
-        setTimeout(() => {
-          const peakTxn = data.transactions.reduce((a,b) =>
-            a.fraud_score > b.fraud_score ? a : b
-          );
-          setOtpModal({ txnId: peakTxn.transaction_id, amount: peakTxn.amount });
-        }, 800);
-      }
     } catch (err) {
       console.error("Fire attack failed:", err);
       setFiring(null);
@@ -227,29 +210,6 @@ export default function DemoPage() {
 
   return (
     <div className="demo-page">
-
-      {/* Mobile notification */}
-      {notification && (
-        <MobileNotification
-          msg={notification.msg} tier={notification.tier}
-          onDismiss={() => setNotification(null)}
-        />
-      )}
-
-      {/* OTP modal */}
-      {otpModal && !otpResult && (
-        <OTPModal
-          txnId={otpModal.txnId} amount={otpModal.amount}
-          onVerify={(code) => {
-            setOtpModal(null);
-            setOtpResult({ verified: true, code });
-          }}
-          onDecline={() => {
-            setOtpModal(null);
-            setOtpResult({ verified: false });
-          }}
-        />
-      )}
 
       <div className="demo-container">
 

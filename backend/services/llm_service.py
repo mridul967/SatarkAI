@@ -40,24 +40,30 @@ class LLMService:
             "openai_api_key": settings.openai_api_key
         })
 
+    def _is_valid_key(self, key: str) -> bool:
+        if not key: return False
+        # Treat typical placeholders as invalid
+        placeholders = ["sk-ant-xxx", "sk-proj-xxx", "your_key", "0x...", "xxx"]
+        return not any(p in key.lower() for p in placeholders)
+
     def update_keys(self, keys: dict):
-        if keys.get("google_api_key") and genai:
+        if self._is_valid_key(keys.get("google_api_key")) and genai:
             genai.configure(api_key=keys["google_api_key"])
             self.gemini_model = genai.GenerativeModel('gemini-2.0-flash')
         else:
             self.gemini_model = None
 
-        if keys.get("groq_api_key") and AsyncGroq:
+        if self._is_valid_key(keys.get("groq_api_key")) and AsyncGroq:
             self.groq_client = AsyncGroq(api_key=keys["groq_api_key"])
         else:
             self.groq_client = None
 
-        if keys.get("anthropic_api_key") and anthropic:
+        if self._is_valid_key(keys.get("anthropic_api_key")) and anthropic:
             self.anthropic_client = anthropic.AsyncAnthropic(api_key=keys["anthropic_api_key"])
         else:
             self.anthropic_client = None
 
-        if keys.get("openai_api_key") and AsyncOpenAI:
+        if self._is_valid_key(keys.get("openai_api_key")) and AsyncOpenAI:
             self.openai_client = AsyncOpenAI(api_key=keys["openai_api_key"])
         else:
             self.openai_client = None
@@ -154,6 +160,7 @@ You MUST respond ONLY with a raw JSON object containing exactly these fields (no
         score = 0.0
         risk = "SAFE"
         reason = "Execution error"
+        error_occurred = False
         
         try:
             prompt = self._build_prompt(txn, features, graph_signals)
@@ -169,6 +176,7 @@ You MUST respond ONLY with a raw JSON object containing exactly these fields (no
                 
         except Exception as e:
             reason = f"Provider Native Error: {e}"
+            error_occurred = True
             print(reason)
             
         elapsed = (time.time() - start) * 1000
@@ -179,15 +187,16 @@ You MUST respond ONLY with a raw JSON object containing exactly these fields (no
             "explanation": reason,
             "model_used": provider,
             "processing_time_ms": elapsed,
-            "offline": False
+            "offline": False,
+            "error": error_occurred
         }
 
     async def compare(self, txn: Transaction, features: Dict[str, Any], graph_signals: List[str]):
         providers = ["claude", "gemini", "gpt4o", "groq"]
         results = await asyncio.gather(*(self.predict(txn, features, graph_signals, p) for p in providers))
         
-        # Filter out offline results for consensus
-        active_results = [r for r in results if not r.get("offline", False)]
+        # Filter out offline results or errors for consensus
+        active_results = [r for r in results if not r.get("offline", False) and not r.get("error", False)]
         
         if active_results:
             avg_score = sum(r["fraud_score"] for r in active_results) / len(active_results)

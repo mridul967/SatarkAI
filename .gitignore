@@ -43,7 +43,15 @@ SatarkAI.md
 SIMULATION.md
 technicaldeepdives.md
 
-*.txtbackend/ml/data/
+*.txt
+backend/ml/data/
 backend/ml/data
 backend/ml/data/*
 backend/models/*.onnx.data
+
+# Reports & Temp
+data/compliance_reports/
+test_ws.py
+*.pdf
+backend/satarkai.db
+*.log

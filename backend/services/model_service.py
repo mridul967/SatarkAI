@@ -6,6 +6,9 @@ import statistics
 from collections import deque
 from typing import Dict, Any
 
+from services.calibration_service import calibration_service
+from services.drift_service import record_score
+
 class ModelService:
     def __init__(self):
         self._latency_window: deque = deque(maxlen=100)
@@ -67,10 +70,18 @@ class ModelService:
         # Simple weighted ensemble (match logic in the old predict.py)
         # Note: final_score = 0.6 * gat_score + 0.4 * lgbm_score is done in router or here.
         # User's provided snippet returns 'score', I'll calculate it here.
-        score = float(0.6 * gat_score + 0.4 * lgbm_score)
+        raw_score = float(0.6 * gat_score + 0.4 * lgbm_score)
+        
+        calibrated_score = calibration_service.apply(raw_score)
+        calibration_active = calibration_service.platt_scaler is not None
+        
+        # Log to Drift pipeline
+        record_score(calibrated_score)
         
         return {
-            "score": score,
+            "score": calibrated_score,
+            "raw_score": round(raw_score, 4),
+            "calibration_active": calibration_active,
             "gat_score": gat_score,
             "lgbm_score": lgbm_score,
             "explanation": "Real-time GNN + LGBM Ensemble"

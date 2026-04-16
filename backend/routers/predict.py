@@ -174,6 +174,30 @@ MERCHANT_POOL = ["mcht_crypto_1", "mcht_grocery_2", "mcht_electronics_3", "mcht_
 CATEGORY_POOL = ["crypto_exchange", "grocery", "electronics", "online_gaming"]
 LOCATION_POOL = ["Mumbai", "Delhi", "Bengaluru", "Hyderabad", "Chennai"]
 
+def get_simulated_score(profile: str, amount: float, velocity: int, location_changed: bool) -> float:
+    if profile == "usr_1003":  # Fraudster — always hot
+        return round(random.uniform(0.65, 0.97), 4)
+
+    if profile == "usr_1001":  # Consistent
+        base = random.uniform(0.03, 0.12)
+        if amount > 50000:
+            base = random.uniform(0.55, 0.70)
+        return round(base, 4)
+
+    if profile == "usr_1002":  # Traveler
+        base = random.uniform(0.08, 0.22)
+        if location_changed and amount > 20000:
+            base = random.uniform(0.45, 0.65)
+        return round(base, 4)
+
+    if profile == "usr_1004":  # Shared Device
+        base = random.uniform(0.10, 0.28)
+        if velocity > 3:
+            base = random.uniform(0.50, 0.72)
+        return round(base, 4)
+
+    return round(random.uniform(0.05, 0.15), 4)  # safe default
+
 async def websocket_endpoint(websocket: WebSocket):
     await websocket.accept()
     try:
@@ -225,35 +249,12 @@ async def websocket_endpoint(websocket: WebSocket):
             txn_obj = Transaction(**txn_dict)
             graph_service.add_transaction(txn_obj)
 
-            # ── Realistic Scoring (Calibrated Thresholds: 60/80/90) ──
-            # 0-60% SAFE | 60-80% MEDIUM (review) | 80-90% HIGH (escalate) | 90-100% CRITICAL (auto-block)
-            score = round(random.uniform(0.01, 0.15), 4)  # Base: 1%–15% for legitimate traffic
-            reason = "Legitimate profile — no anomalies detected."
+            # ── Recalibrated Target Distribution ──
+            velocity = random.randint(1, 5) if behavior == "shared_device" else random.randint(1, 2)
+            loc_changed = behavior == "traveler" or behavior == "suspicious_legit"
             
-            if behavior == "fraudster" and amount > 15000:
-                score = round(random.uniform(0.90, 0.99), 4)
-                reason = "CRITICAL: Multi-device fraud ring with extreme transaction velocity."
-            elif behavior == "fraudster":
-                score = round(random.uniform(0.80, 0.92), 4)
-                reason = "HIGH: Known fraudster profile detected."
-            elif behavior == "suspicious_legit" and amount > 5000:
-                score = round(random.uniform(0.55, 0.78), 4)
-                reason = "Elevated: First-time large purchase from new location. Manual review recommended."
-            elif behavior == "suspicious_legit":
-                score = round(random.uniform(0.30, 0.60), 4)
-                reason = "Mildly anomalous: Multi-city login pattern. Likely legitimate travel."
-            elif behavior == "shared_device" and amount > 8000:
-                score = round(random.uniform(0.60, 0.79), 4)
-                reason = "MEDIUM: Shared device fingerprint with unusual volume. Flagged for review."
-            elif behavior == "shared_device":
-                score = round(random.uniform(0.20, 0.50), 4)
-                reason = "Low-medium: Shared device detected but transaction within norms."
-            elif amount > 40000:
-                score = round(random.uniform(0.40, 0.70), 4)
-                reason = "Elevated: Large transaction outside normal spending bounds."
-            elif amount < 200:
-                score = round(random.uniform(0.005, 0.05), 4)
-                reason = "Safe: Micro-transaction within typical bounds."
+            score = get_simulated_score(user_id, amount, velocity, loc_changed)
+            reason = f"Simulated Profile: {behavior}. Auto-scaled."
                 
             risk = "CRITICAL" if score > 0.9 else "HIGH" if score > 0.8 else "MEDIUM" if score > 0.6 else "SAFE"
             
@@ -293,7 +294,7 @@ async def websocket_endpoint(websocket: WebSocket):
                     # 2. Extract the neural narrative (from first available model or consensus)
                     neural_narrative = ""
                     for p in consensus_res["predictions"]:
-                        if not p.get("offline") and p.get("explanation"):
+                        if not p.get("offline") and not p.get("error") and p.get("explanation"):
                             neural_narrative = p["explanation"]
                             break
                     

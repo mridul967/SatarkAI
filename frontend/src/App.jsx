@@ -11,6 +11,7 @@ import { useAuth } from './contexts/AuthContext';
 // Redesigned Components
 import ScoreGauge from './components/ScoreGauge';
 import FraudGraph from './components/FraudGraph';
+import FraudReplay from './components/FraudReplay';
 import ModelCompare from './components/ModelCompare';
 import TransactionHistory from './components/TransactionHistory';
 import AccountSettings from './components/AccountSettings';
@@ -23,6 +24,141 @@ import LanguageToggle from './components/LanguageToggle';
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000';
 
+// ── Mobile Notification simulation ─────────────────────────────────────────
+const MobileNotification = ({ msg, isCritical, onDismiss }) => {
+  useEffect(() => {
+    const t = setTimeout(onDismiss, 6000);
+    return () => clearTimeout(t);
+  }, [onDismiss]);
+
+  const color = isCritical ? "#A32D2D" : "#633806";
+  const bg = isCritical ? "#FCEBEB" : "#FAEEDA";
+
+  return (
+    <div style={{
+      position: 'fixed', top: 20, zIndex: 9999, background: '#fff',
+      padding: '12px 16px', borderRadius: 12, border: `1px solid ${color}`,
+      boxShadow: '0 10px 30px rgba(0,0,0,0.5)', width: 320, left: '50%', transform: 'translateX(-50%)',
+      fontFamily: 'sans-serif', animation: 'slide-down 0.4s ease-out'
+    }}>
+      <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 6 }}>
+        <div style={{ background: bg, padding: 6, borderRadius: 20 }}>🛡️</div>
+        <div>
+          <div style={{ fontSize: 11, fontWeight: 600, color: color }}>SatarkAI — {isCritical ? 'CRITICAL' : 'HIGH ALERT'}</div>
+          <div style={{ fontSize: 10, color: "#999" }}>now</div>
+        </div>
+        <button onClick={onDismiss} style={{ marginLeft: 'auto', background: 'none', border: 'none', fontSize: 18, color: '#999', cursor: 'pointer' }}>×</button>
+      </div>
+      <div style={{ fontSize: 13, color: "#1c1a18", lineHeight: 1.5 }}>{msg}</div>
+    </div>
+  );
+};
+
+// ── OTP Modal (High Alert) ──────────────────────────────────────────────────
+const OTPModal = ({ txnId, amount, onVerify, onDecline }) => {
+  const [otp, setOtp] = useState(["","","","","",""]);
+  const [error, setError] = useState(false);
+  const inputRefs = useRef([]);
+
+  const handleKey = (i, val) => {
+    if (!/^\d?$/.test(val)) return;
+    const next = [...otp];
+    next[i] = val;
+    setOtp(next);
+    setError(false);
+    if (val && i < 5) inputRefs.current[i+1]?.focus();
+  };
+
+  return (
+    <div style={{
+      position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.85)', backdropFilter: 'blur(4px)',
+      display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 9999, padding: 20
+    }}>
+      <div style={{
+        background: '#fff', borderRadius: 24, padding: 30, width: '100%', maxWidth: 360,
+        boxShadow: '0 20px 60px rgba(0,0,0,0.5)', fontFamily: 'sans-serif'
+      }}>
+        <div style={{ textAlign: "center", marginBottom: 20 }}>
+          <div style={{ fontSize: 32, marginBottom: 10 }}>⚠️</div>
+          <div style={{ fontSize: 17, fontWeight: 600, color: "#1c1a18" }}>Verify this payment</div>
+          <div style={{ fontSize: 12, color: "#888", marginTop: 4 }}>SatarkAI flagged unusual activity</div>
+        </div>
+
+        <div style={{ background: '#f5f5f5', padding: 16, borderRadius: 16, textAlign: 'center', marginBottom: 20 }}>
+          <div style={{ fontSize: 11, color: "#888" }}>Transaction</div>
+          <div style={{ fontSize: 13, fontWeight: 600, marginTop: 2, fontFamily: "monospace" }}>{txnId}</div>
+          <div style={{ fontSize: 24, fontWeight: 600, color: "#633806", marginTop: 6 }}>
+            ₹{Number(amount).toLocaleString("en-IN", {minimumFractionDigits:2})}
+          </div>
+          <div style={{ fontSize: 10, background: '#FAEEDA', color: '#633806', display: 'inline-block', padding: '4px 8px', borderRadius: 8, marginTop: 10, fontWeight: 600 }}>
+            Risk score: HIGH — re-verification required
+          </div>
+        </div>
+
+        <div style={{ fontSize: 12, color: "#888", marginBottom: 10, textAlign: 'center' }}>Enter the OTP sent to your registered number</div>
+        <div style={{ display: 'flex', gap: 6, justifyContent: 'center', marginBottom: error ? 8 : 18 }}>
+          {otp.map((v, i) => (
+            <input
+              key={i} ref={el => inputRefs.current[i] = el} value={v} maxLength={1}
+              onChange={e => handleKey(i, e.target.value)}
+              onKeyDown={e => { if (e.key === "Backspace" && !v && i > 0) inputRefs.current[i-1]?.focus(); }}
+              style={{
+                width: 36, height: 44, textAlign: 'center', fontSize: 18, fontWeight: 600,
+                border: `2px solid ${error ? '#A32D2D' : '#eee'}`, borderRadius: 8, background: '#fff', color: '#000'
+              }}
+            />
+          ))}
+        </div>
+        
+        <div style={{ display: "flex", gap: 8, marginTop: 20 }}>
+          <button onClick={onDecline} style={{ flex: 1, padding: '12px 0', borderRadius: 12, border: '1px solid #ddd', background: '#fff', color: '#666', fontWeight: 600, cursor: 'pointer' }}>Decline</button>
+          <button onClick={() => { if(otp.join("").length < 6) setError(true); else onVerify(otp.join("")); }} style={{ flex: 2, padding: '12px 0', borderRadius: 12, border: 'none', background: '#1c1a18', color: '#fff', fontWeight: 600, cursor: 'pointer' }}>Verify & Allow</button>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+const DriftBanner = () => {
+  const [drift, setDrift] = useState(null);
+
+  useEffect(() => {
+    const check = async () => {
+      try {
+        const res = await fetch(`${API_URL}/api/explain/drift/status`);
+        const data = await res.json();
+        setDrift(data);
+      } catch (e) {
+        console.error("Failed to fetch drift status", e);
+      }
+    };
+    check();
+    const interval = setInterval(check, 30000);
+    return () => clearInterval(interval);
+  }, []);
+
+  if (!drift || drift.status === "STABLE" || drift.status === "INSUFFICIENT_DATA") return null;
+
+  const isAlert = drift.status === "DRIFT_ALERT";
+
+  return (
+    <div style={{
+      position: "fixed", top: 12, right: 12, zIndex: 9999,
+      background: isAlert ? "#FCEBEB" : "#FAEEDA",
+      border: `1px solid ${isAlert ? "#A32D2D" : "#633806"}`,
+      borderRadius: 8, padding: "10px 16px", maxWidth: 320,
+      fontSize: 12, color: isAlert ? "#A32D2D" : "#633806",
+      boxShadow: "0 4px 12px rgba(0,0,0,0.15)"
+    }}>
+      <strong>{isAlert ? "⚠ Model Drift Detected" : "◉ Drift Monitor: Watch"}</strong>
+      <div style={{ marginTop: 4, opacity: 0.85 }}>
+        PSI: {drift.psi_value} · Flag Rate: {(drift.flag_rate * 100).toFixed(1)}%
+        {isAlert && " — Recalibration recommended"}
+      </div>
+    </div>
+  );
+};
+
 function App() {
   const { user, logout } = useAuth();
   const [activeTab, setActiveTab] = useState('dashboard');
@@ -34,6 +170,49 @@ function App() {
   const { isConnected, lastTransaction, data } = useWebSocket(WS_URL);
   
   const [lang, setLang] = useState(() => localStorage.getItem('sartak_lang') || 'en');
+
+  // Global Demo Alerts Connection
+  const [notification, setNotification] = useState(null);
+  const [otpModal, setOtpModal] = useState(null);
+
+  useEffect(() => {
+    const wsUrlAlerts = `${API_URL.replace(/^https?:\/\//, `${wsProtocol}://`)}/api/demo/ws/alerts`;
+    let ws;
+    try {
+      ws = new WebSocket(wsUrlAlerts);
+      ws.onmessage = (event) => {
+        const data = JSON.parse(event.data);
+        const { action, peak_score, transactions } = data;
+        
+        // Find the transaction that tripped the highest score
+        const peakTxn = transactions && transactions.length > 0 
+          ? transactions.reduce((a,b) => a.fraud_score > b.fraud_score ? a : b)
+          : { amount: 0, receiver: "Unknown", city: "Unknown" };
+          
+        const formattedAmt = Number(peakTxn.amount).toLocaleString("en-IN", {minimumFractionDigits:2});
+        
+        // Emulate Mobile Device actions with realistic formatting
+        if (action === "AUTO_BLOCKED") {
+          setNotification({
+            msg: `SatarkAI Defense: Blocked fraudulent transfer of ₹${formattedAmt} to ${peakTxn.receiver.substring(0,8)}... Score: ${(peak_score*100).toFixed(0)}%. FMR-1 drafted.`,
+            isCritical: true
+          });
+        } else if (action === "OTP_REQUIRED") {
+          setNotification({
+            msg: `Suspicious activity: ₹${formattedAmt} charge requested near ${peakTxn.city || 'Unknown'}. Score: ${(peak_score*100).toFixed(0)}%. Verification required.`,
+            isCritical: false
+          });
+          
+          setTimeout(() => {
+            setOtpModal({ txnId: peakTxn.transaction_id, amount: peakTxn.amount });
+          }, 800);
+        }
+      };
+    } catch (err) {
+      console.warn("Could not connect to demo alert WS:", err);
+    }
+    return () => { if (ws) ws.close(); }
+  }, []);
 
   const handleLangToggle = (newLang) => {
     setLang(newLang);
@@ -61,6 +240,41 @@ function App() {
 
   return (
     <div className="relative flex h-screen bg-[#f0f0ee] text-[#1c1a18] overflow-hidden selection:bg-[#ff8c3c]/30 w-full">
+      <DriftBanner />
+
+      {/* Global simulated victim alerts mapping from Demo Dashboard */}
+      {notification && (
+        <MobileNotification 
+          msg={notification.msg} isCritical={notification.isCritical} onDismiss={() => setNotification(null)} 
+        />
+      )}
+      {otpModal && (
+        <OTPModal
+          txnId={otpModal.txnId} amount={otpModal.amount}
+          onVerify={() => setOtpModal(null)} 
+          onDecline={async () => {
+            try {
+              await fetch(`${API_URL.replace(/^ws/, 'http')}/api/demo/otp_result`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                  transaction_id: otpModal.txnId,
+                  amount: otpModal.amount,
+                  action: 'DECLINED'
+                })
+              });
+              setOtpModal(null);
+              setNotification({
+                msg: `Authentication failed. Auto-blocking transaction ${otpModal.txnId.substring(0,6)}... and drafting FMR-1.`,
+                isCritical: true
+              });
+            } catch (err) {
+              console.error(err);
+              setOtpModal(null);
+            }
+          }}
+        />
+      )}
       
       {/* Mobile Menu Overlay */}
       {isMobileMenuOpen && (
@@ -335,7 +549,7 @@ function App() {
           {activeTab === 'graph' && (
             <div className="max-w-[1600px] mx-auto space-y-5 animate-slide-up-subtle">
               <div className="h-[calc(100vh-160px)] md:h-[800px] min-h-[400px] rounded-3xl overflow-hidden glass-card border-none shadow-2xl">
-                <FraudGraph userId={lastTransaction?.transaction.user_id || 'usr_1001'} API_URL={API_URL} />
+                <FraudReplay />
               </div>
             </div>
           )}
