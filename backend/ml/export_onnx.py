@@ -40,7 +40,7 @@ def export_gat_to_onnx():
         (dummy_x, dummy_edge_index),
         onnx_path,
         export_params=True,
-        opset_version=14,
+        opset_version=12,
         input_names=['x', 'edge_index'],
         output_names=['output'],
         dynamic_axes={'x': {0: 'num_nodes'}, 'edge_index': {1: 'num_edges'}, 'output': {0: 'num_nodes'}}

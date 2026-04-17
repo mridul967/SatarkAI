@@ -55,3 +55,9 @@ test_ws.py
 *.pdf
 backend/satarkai.db
 *.log
+
+# SLM — never commit model weights or raw training data
+slm_service/satark-slm-final/
+slm_training/training_data.jsonl
+slm_training/satark-slm-checkpoints/
+*.safetensors

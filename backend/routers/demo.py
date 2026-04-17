@@ -152,11 +152,15 @@ async def _demo_score(features: dict, txn: dict) -> dict:
         "account_age_risk": round(random.uniform(0.05, 0.15), 3),
     }
 
+    # Centralized latency is now handled inside model_service.run_inference
+    # to ensure consistency across the entire ecosystem.
+
     return {
         "score": score,
         "gat_score": result.get("gat_score", score * 1.05),
         "lgbm_score": result.get("lgbm_score", score * 0.92),
         "graph_contribution": graph_contribution,
+        "latency_ms": result.get("latency_ms", 30.0)
     }
 
 

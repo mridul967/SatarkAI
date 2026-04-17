@@ -293,7 +293,7 @@ function App() {
             </div>
             <div>
               <h1 className="text-xl font-black tracking-tighter text-white">SATARK<span className="text-[#ff8c3c] italic">AI</span></h1>
-              <div className="text-[10px] font-black uppercase tracking-[0.3em] text-[#a8976d] leading-none">Pro Engine v2.0</div>
+              <div className="text-[10px] font-black uppercase tracking-[0.3em] text-[#a8976d] leading-none">Pro Engine v3.0</div>
             </div>
           </div>
         </div>

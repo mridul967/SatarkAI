@@ -1,0 +1,11 @@
+{
+    "timestamp": "2026-04-16 11:58:12",
+    "metrics": {
+        "accuracy": 0.9742,
+        "precision": 0.9631,
+        "recall": 0.9485,
+        "f1": 0.9557,
+        "auc": 0.9892
+    },
+    "checkpoint": "satark_lgbm.pkl"
+}

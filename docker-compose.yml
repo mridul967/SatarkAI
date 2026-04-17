@@ -83,3 +83,32 @@ services:
       - /app/node_modules
     depends_on:
       - backend
+
+  # ── SLM Service (Phase 2.5) — only starts with --profile slm ──────────
+  slm_service:
+    profiles:
+      - slm                            # NEVER starts with plain `docker compose up`
+    build:
+      context: ./slm_service
+      dockerfile: Dockerfile
+    ports:
+      - '8765:8765'
+    volumes:
+      - ./slm_service/satark-slm-final:/app/satark-slm-final:ro
+    environment:
+      - SLM_BASE_MODEL=mistralai/Mistral-7B-Instruct-v0.3
+      - SLM_ADAPTER_PATH=/app/satark-slm-final
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: 1
+              capabilities: [gpu]
+    healthcheck:
+      test: ['CMD', 'curl', '-f', 'http://localhost:8765/health']
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 120s
+    restart: unless-stopped

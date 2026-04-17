@@ -3,6 +3,8 @@ import pandas as pd
 import numpy as np
 import pickle
 import os
+import time
+import json
 
 # Path handling
 BASE_PATH = "backend/" if os.path.exists("backend") else ""
@@ -66,6 +68,31 @@ def train_lgbm():
             'features': list(X.columns)
         }, f)
     print(f"Model saved to {MODEL_PATH}")
+
+    # --- Neural Audit Ledger Generation ---
+    from sklearn.metrics import accuracy_score, precision_score, recall_score, f1_score, roc_auc_score
+    import json
+    
+    print("Generating Neural Audit Ledger...")
+    y_prob = model.predict(X_val)
+    y_pred = (y_prob > 0.5).astype(int)
+    
+    audit_data = {
+        "timestamp": time.strftime("%Y-%m-%d %H:%M:%S"),
+        "metrics": {
+            "accuracy": float(accuracy_score(y_val, y_pred)),
+            "precision": float(precision_score(y_val, y_pred)),
+            "recall": float(recall_score(y_val, y_pred)),
+            "f1": float(f1_score(y_val, y_pred)),
+            "auc": float(roc_auc_score(y_val, y_prob))
+        },
+        "checkpoint": os.path.basename(MODEL_PATH)
+    }
+    
+    audit_path = f"{BASE_PATH}models/audit_ledger.json"
+    with open(audit_path, 'w') as f:
+        json.dump(audit_data, f, indent=4)
+    print(f"✓ Neural Audit Ledger updated: {audit_path}")
 
 if __name__ == '__main__':
     train_lgbm()

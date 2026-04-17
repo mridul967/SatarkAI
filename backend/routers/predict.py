@@ -254,13 +254,14 @@ async def websocket_endpoint(websocket: WebSocket):
             loc_changed = behavior == "traveler" or behavior == "suspicious_legit"
             
             score = get_simulated_score(user_id, amount, velocity, loc_changed)
+            risk = "CRITICAL" if score > 0.9 else "HIGH" if score > 0.8 else "MEDIUM" if score > 0.6 else "SAFE"
             reason = f"Simulated Profile: {behavior}. Auto-scaled."
                 
-            risk = "CRITICAL" if score > 0.9 else "HIGH" if score > 0.8 else "MEDIUM" if score > 0.6 else "SAFE"
-            
-            # Simulated Latency for the WebSocket Feed
-            simulated_latency = round(random.uniform(18.0, 48.0), 2)
-            if score > 0.9: simulated_latency += 10 # Slightly more for complex cases
+            # ── High-Performance 'Hot Path' Simulation (<50ms) ──
+            if score > 0.80:
+                simulated_latency = round(random.uniform(38.0, 48.0), 2)
+            else:
+                simulated_latency = round(random.uniform(5.0, 20.0), 2)
 
             prediction = {
                 "fraud_score": score,

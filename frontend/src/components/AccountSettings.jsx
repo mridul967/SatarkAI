@@ -141,7 +141,7 @@ export default function AccountSettings() {
               </div>
               <div className="flex justify-between items-center text-xs">
                 <span className="text-gray-500">Architecture</span>
-                <span className="text-gray-300">GAT + 4-LLM Ensemble</span>
+                <span className="text-gray-300">GAT + SLM Ensemble</span>
               </div>
               <div className="flex justify-between items-center text-xs">
                 <span className="text-gray-500">Database Engine</span>
